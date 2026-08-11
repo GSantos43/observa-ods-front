@@ -10,7 +10,7 @@
       </RouterLink>
 
       <section class="mt-6">
-        <p class="text-xs font-bold uppercase tracking-wide text-[#1d6d13]">
+        <p class="vc-ods-about-eyebrow">
           Transparência e dados abertos
         </p>
         <p role="heading" aria-level="1" class="vc-page-title text-slate-950">
@@ -22,7 +22,7 @@
         </p>
       </section>
 
-      <section class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <section class="mt-8 grid space-y-3 sm:grid-cols-2 lg:grid-cols-3">
         <article
           v-for="item in sources"
           :key="item.title"
@@ -51,7 +51,7 @@ const sources = [
   {
     title: 'Indicadores municipais',
     text: 'Séries históricas e recortes territoriais para acompanhar evolução das políticas.',
-    icon: 'monitoring',
+    icon: 'monitor',
   },
   {
     title: 'Evidências e relatórios',

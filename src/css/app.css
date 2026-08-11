@@ -823,7 +823,6 @@ main article {
 
 .vc-about-hero {
   display: grid;
-  gap: 1rem;
   overflow: hidden;
   border: 1px solid rgba(16, 80, 42, 0.18);
   border-radius: 0.75rem;
@@ -893,7 +892,8 @@ main article {
 }
 
 .vc-about-agenda {
-  margin: 0 1rem 1rem;
+  margin: clamp(1.5rem, 4vw, 3rem);
+  margin-top: 0;
   padding: 1.35rem;
   border-radius: 0.75rem;
   background: #d9f99d;
@@ -1674,6 +1674,7 @@ main article {
   display: grid;
   place-items: center;
   border-radius: 0.75rem;
+  padding: 2rem 0;
   background: rgba(255, 255, 255, 0.1);
 }
 

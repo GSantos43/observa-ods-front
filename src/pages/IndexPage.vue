@@ -213,7 +213,7 @@
           </Transition>
         </div>
 
-        <div class="grid items-start gap-5 lg:gap-5">
+        <div class="grid items-start gap-5 lg:gap-5 rounded-md overflow-hidden">
           <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             <button
               v-for="goal in goals"
@@ -335,11 +335,11 @@
         </div>
       </section>
 
-      <section id="secretarias" class="mt-10 grid gap-4 md:grid-cols-3">
+      <section id="secretarias" class="mt-10 grid space-y-4 md:grid-cols-3">
         <article
           v-for="metric in metrics"
           :key="metric.label"
-          class="rounded border border-slate-200 bg-white p-5"
+          class="rounded-md border border-slate-200 bg-white p-5"
         >
           <q-icon :name="metric.icon" class="text-3xl text-[#1d6d13]" />
           <p class="mt-4 text-3xl font-black text-slate-950">{{ metric.value }}</p>
@@ -347,7 +347,7 @@
         </article>
       </section>
 
-      <p id="fontes" class="mt-8 text-xs text-slate-500">
+      <p id="fontes" class="pt-8 pl-1 text-xs text-slate-500/60">
         Foto: Saulo luz, CC BY 4.0, via Wikimedia Commons.
       </p>
     </main>

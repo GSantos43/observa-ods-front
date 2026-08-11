@@ -47,7 +47,7 @@
         </aside>
       </section>
 
-      <section class="mt-8 grid items-stretch gap-6 lg:grid-cols-[minmax(0,1fr)_390px]">
+      <section class="mt-8 grid items-stretch space-y-6 lg:grid-cols-[minmax(0,1fr)_390px]">
         <article class="vc-ods-detail-situation">
           <p class="text-xs font-black uppercase tracking-wide text-[#1d6d13]">
             Situação no município
@@ -179,7 +179,7 @@
         </div>
       </section>
 
-      <section class="mt-10 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <section class="mt-10 grid items-start space-y-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <article class="vc-ods-indicators-table">
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div>

@@ -16,7 +16,7 @@
       </section>
 
       <section class="p-6 sm:p-10 lg:p-12">
-        <RouterLink to="/" class="inline-flex items-center gap-2 text-sm font-bold text-[#1d6d13]">
+        <RouterLink to="/" class="vc-ods-about-eyebrow">
           <q-icon name="west" size="18px" /> Voltar ao observatório
         </RouterLink>
         <div class="mt-10">
