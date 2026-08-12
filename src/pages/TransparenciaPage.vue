@@ -22,7 +22,7 @@
         </p>
       </section>
 
-      <section class="mt-8 grid space-y-3 sm:grid-cols-2 lg:grid-cols-3">
+      <section class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <article
           v-for="item in sources"
           :key="item.title"

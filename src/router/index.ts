@@ -7,6 +7,7 @@ import {
 
 import routes from './routes';
 import { useAuthStore } from '@/stores/auth-store';
+import { finishRouteLoading, startRouteLoading } from '@/services/route-loading';
 
 /*
  * If not building with SSR mode, you can
@@ -37,11 +38,23 @@ export default defineRouter(({ store }) => {
   });
 
   Router.beforeEach(async (to) => {
+    startRouteLoading();
     const auth = useAuthStore(store);
     try { await auth.restoreSession(); } catch { auth.logout(); }
     if (to.meta.requiresAuth && !auth.isAuthenticated) return { name: 'login', query: { redirect: to.fullPath } };
     if (to.meta.guestOnly && auth.isAuthenticated) return { name: 'admin' };
     return true;
+  });
+
+  Router.afterEach((to) => {
+    finishRouteLoading();
+    if (typeof document === 'undefined') return;
+    const sectionTitle = typeof to.meta.title === 'string' ? to.meta.title : '';
+    document.title = sectionTitle ? `${sectionTitle} | ObservaODS` : 'ObservaODS';
+  });
+
+  Router.onError(() => {
+    finishRouteLoading();
   });
 
   return Router;

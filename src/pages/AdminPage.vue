@@ -4,21 +4,9 @@
       class="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)]"
     >
       <aside
-        class="vc-admin-sidebar rounded-md border border-slate-200 bg-white p-3 shadow-sm lg:sticky lg:top-20 lg:h-[calc(100vh-6.5rem)]"
+        class="vc-admin-sidebar rounded-md border border-slate-200 bg-white p-3 shadow-sm lg:sticky lg:top-20 lg:self-start"
       >
-        <div class="border-b border-slate-100 p-3">
-          <div class="flex items-center gap-3">
-            <span class="grid h-10 w-10 place-items-center rounded-md bg-[#1d6d13] text-white">
-              <q-icon name="admin_panel_settings" size="22px" />
-            </span>
-            <div class="min-w-0">
-              <p class="text-sm font-bold leading-tight text-slate-950">Admin ObservaODS</p>
-              <p class="mt-1 text-xs leading-snug text-slate-500">Gest&atilde;o mock dos ODS</p>
-            </div>
-          </div>
-        </div>
-
-        <nav class="vc-admin-nav mt-3 space-y-1">
+        <nav class="vc-admin-nav space-y-1">
           <button
             v-for="item in adminSections"
             :key="item.id"
@@ -35,18 +23,27 @@
               <span class="mt-0.5 block text-xs leading-snug opacity-70">{{ item.caption }}</span>
             </span>
           </button>
+
+          <RouterLink
+            to="/reproducao"
+            class="vc-admin-nav-item mt-3 border-t border-slate-100 pt-3"
+          >
+            <span class="vc-admin-nav-icon">
+              <q-icon name="connected_tv" size="18px" />
+            </span>
+            <span class="min-w-0 text-left">
+              <span class="block text-sm font-semibold leading-tight">Tela de reprodu&ccedil;&atilde;o</span>
+              <span class="mt-0.5 block text-xs leading-snug opacity-70">Exibi&ccedil;&atilde;o em TV</span>
+            </span>
+            <q-icon class="ml-auto" name="open_in_new" size="16px" />
+          </RouterLink>
         </nav>
 
-        <div class="vc-admin-model-note mt-4 rounded-md border border-emerald-100 bg-emerald-50 p-3">
-          <p class="text-xs font-bold uppercase tracking-wide text-[#1d6d13]">Modelo de dados</p>
-          <p class="mt-2 text-xs leading-5 text-slate-600">
-            Objetivo, meta, indicador, fonte, recorte territorial, per&iacute;odo e valor observado.
-          </p>
-        </div>
       </aside>
 
       <main class="min-w-0 space-y-5">
         <header
+          v-if="activeSection === 'visao'"
           class="rounded-md border border-slate-200 bg-white p-5 shadow-sm sm:flex sm:items-start sm:justify-between sm:gap-5"
         >
           <div>
@@ -77,6 +74,25 @@
 
         <Transition name="vc-page" mode="out-in">
           <section v-if="activeSection === 'visao'" key="visao" class="space-y-5">
+            <section class="vc-admin-overview-metrics" aria-label="Resumo do observatório">
+              <article
+                v-for="metric in dashboardMetrics"
+                :key="metric.label"
+                class="vc-admin-stat"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="vc-admin-stat-label">{{ metric.label }}</p>
+                    <p class="vc-admin-stat-value">{{ metric.value }}</p>
+                  </div>
+                  <span class="vc-admin-stat-icon">
+                    <q-icon :name="metric.icon" size="20px" />
+                  </span>
+                </div>
+                <p class="vc-admin-stat-caption">{{ metric.caption }}</p>
+              </article>
+            </section>
+
             <div class="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.9fr)]">
               <article class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
                 <div class="flex flex-wrap items-start justify-between gap-3">
@@ -152,29 +168,6 @@
                 </div>
               </article>
             </div>
-
-            <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <article
-                v-for="metric in dashboardMetrics"
-                :key="metric.label"
-                class="vc-admin-stat rounded-md border border-slate-200 bg-white p-4 shadow-sm"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      {{ metric.label }}
-                    </p>
-                    <p class="mt-2 text-2xl font-black leading-none text-slate-950">
-                      {{ metric.value }}
-                    </p>
-                  </div>
-                  <span class="vc-admin-stat-icon">
-                    <q-icon :name="metric.icon" size="20px" />
-                  </span>
-                </div>
-                <p class="mt-3 text-xs leading-5 text-slate-500">{{ metric.caption }}</p>
-              </article>
-            </section>
 
             <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
               <article class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
@@ -365,11 +358,142 @@
             </article>
           </section>
 
+          <section v-else-if="activeSection === 'triagem'" key="triagem">
+            <article class="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
+              <header class="border-b border-slate-100 p-5 sm:p-6">
+                <p class="text-xs font-bold uppercase tracking-wide text-[#1d6d13]">Triagem editorial</p>
+                <p class="vc-admin-section-title text-slate-950">Notícias com potencial de contribuição aos ODS</p>
+                <p class="mt-2 w-full text-sm leading-6 text-slate-600">
+                  Analise as notícias importadas, valide sua relevância municipal e transforme evidências de iniciativas públicas em ações computáveis pelo ObservaODS.
+                </p>
+              </header>
+
+              <div class="grid gap-3 border-b border-slate-100 bg-slate-50/70 p-4 sm:grid-cols-3 sm:p-5">
+                <button
+                  type="button"
+                  class="vc-triage-filter vc-triage-filter--pending"
+                  :class="triageFilter === 'PENDING' ? 'vc-triage-filter--active' : ''"
+                  :aria-pressed="triageFilter === 'PENDING'"
+                  @click="triageFilter = 'PENDING'"
+                >
+                  <span><q-icon name="schedule" /> Aguardando análise</span>
+                  <strong>{{ triageCounts.PENDING }}</strong>
+                  <q-tooltip anchor="top middle" self="bottom middle" :offset="[0, 8]">
+                    Clique para exibir somente as notícias aguardando análise
+                  </q-tooltip>
+                </button>
+                <button
+                  type="button"
+                  class="vc-triage-filter vc-triage-filter--converted"
+                  :class="triageFilter === 'CONVERTED' ? 'vc-triage-filter--active' : ''"
+                  :aria-pressed="triageFilter === 'CONVERTED'"
+                  @click="triageFilter = 'CONVERTED'"
+                >
+                  <span><q-icon name="task_alt" /> Convertidas em ações</span>
+                  <strong>{{ triageCounts.CONVERTED }}</strong>
+                  <q-tooltip anchor="top middle" self="bottom middle" :offset="[0, 8]">
+                    Clique para filtrar as notícias já convertidas em ações
+                  </q-tooltip>
+                </button>
+                <button
+                  type="button"
+                  class="vc-triage-filter vc-triage-filter--dismissed"
+                  :class="triageFilter === 'DISMISSED' ? 'vc-triage-filter--active' : ''"
+                  :aria-pressed="triageFilter === 'DISMISSED'"
+                  @click="triageFilter = 'DISMISSED'"
+                >
+                  <span><q-icon name="do_not_disturb_on" /> Não aplicáveis</span>
+                  <strong>{{ triageCounts.DISMISSED }}</strong>
+                  <q-tooltip anchor="top middle" self="bottom middle" :offset="[0, 8]">
+                    Clique para exibir as notícias classificadas como não aplicáveis
+                  </q-tooltip>
+                </button>
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
+                <div>
+                  <p class="text-sm font-bold text-slate-950">Fila de notícias</p>
+                  <p class="mt-1 text-xs text-slate-500">Clique em uma linha para abrir a análise completa.</p>
+                </div>
+                <q-btn
+                  v-if="triageFilter !== 'ALL'"
+                  flat
+                  color="green-9"
+                  icon="view_list"
+                  label="Exibir todas"
+                  no-caps
+                  @click="triageFilter = 'ALL'"
+                />
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="vc-admin-table vc-triage-table">
+                  <thead>
+                    <tr>
+                      <th>Notícia</th>
+                      <th>Classificação</th>
+                      <th>Publicação</th>
+                      <th>Validada</th>
+                      <th>Lançada</th>
+                      <th><span class="sr-only">Abrir</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in filteredTriageNews" :key="item.id">
+                      <td>
+                        <RouterLink :to="{ name: 'news-triage', params: { id: item.id } }" class="flex min-w-[310px] items-center gap-3 text-inherit no-underline">
+                          <div class="h-14 w-20 shrink-0 overflow-hidden rounded bg-emerald-950">
+                            <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.title" class="h-full w-full object-cover" />
+                          </div>
+                          <div class="min-w-0">
+                            <p class="line-clamp-2 text-sm font-bold leading-5 text-slate-950">{{ item.title }}</p>
+                            <p class="mt-1 max-w-sm truncate text-xs text-slate-500">{{ item.source }}</p>
+                          </div>
+                        </RouterLink>
+                      </td>
+                      <td>
+                        <span v-if="item.primaryGoalId" class="vc-admin-code">ODS {{ item.primaryGoalId }}</span>
+                        <span v-else class="text-xs text-slate-400">Sem ODS sugerido</span>
+                      </td>
+                      <td class="whitespace-nowrap">{{ item.publishedLabel || formatTriageDate(item.publishedAt) }}</td>
+                      <td>
+                        <span
+                          class="vc-admin-status"
+                          :class="item.triageStatus === 'PENDING' ? 'vc-triage-status--pending' : 'vc-triage-status--converted'"
+                        >
+                          <q-icon :name="item.triageStatus === 'PENDING' ? 'schedule' : 'verified'" class="mr-1" />
+                          {{ item.triageStatus === 'PENDING' ? 'Não' : 'Sim' }}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          class="vc-admin-status"
+                          :class="item.action ? 'vc-triage-status--converted' : 'vc-triage-status--dismissed'"
+                        >
+                          <q-icon :name="item.action ? 'task_alt' : 'remove_circle_outline'" class="mr-1" />
+                          {{ actionLaunchLabel(item) }}
+                        </span>
+                      </td>
+                      <td>
+                        <q-btn flat round color="green-9" icon="chevron_right" :to="{ name: 'news-triage', params: { id: item.id } }">
+                          <q-tooltip>Analisar notícia</q-tooltip>
+                        </q-btn>
+                      </td>
+                    </tr>
+                    <tr v-if="!filteredTriageNews.length">
+                      <td colspan="6" class="py-10 text-center text-sm text-slate-500">Nenhuma notícia encontrada nesta situação.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+
           <section v-else-if="activeSection === 'semaforo'" key="semaforo" class="space-y-5">
             <AdminSectionHeader
-              eyebrow="Sem&aacute;foro ODS"
-              title="Prioridade de acompanhamento por objetivo"
-              text="Consulte a leitura de desempenho de Vit&oacute;ria da Conquista na base do IDSC e converta a pontua&ccedil;&atilde;o em tr&ecirc;s estados de gest&atilde;o: tranquilo, aten&ccedil;&atilde;o e alerta."
+              eyebrow="Painel de monitoramento ODS"
+              title="Classifica&ccedil;&atilde;o das prioridades por objetivo"
+              text="Acompanhe o desempenho de Vit&oacute;ria da Conquista com base no IDSC e identifique, por faixas de pontua&ccedil;&atilde;o, os objetivos com desempenho satisfat&oacute;rio, necessidade de acompanhamento priorit&aacute;rio ou situa&ccedil;&atilde;o cr&iacute;tica."
               icon="traffic"
             />
 
@@ -379,15 +503,15 @@
               <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p class="text-xs font-bold uppercase tracking-wide text-[#1d6d13]">
-                    Fonte externa
+                    Origem dos dados
                   </p>
                   <p class="vc-admin-section-title text-slate-950">
                     IDSC - Vit&oacute;ria da Conquista
                   </p>
                   <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                    Os ODS 1 a 17 s&atilde;o carregados da API p&uacute;blica do IDSC. O ODS 18
-                    permanece como refer&ecirc;ncia municipal demonstrativa enquanto n&atilde;o
-                    existir retorno equivalente na fonte externa.
+                    As pontua&ccedil;&otilde;es dos ODS 1 a 17 s&atilde;o obtidas pela API p&uacute;blica do
+                    IDSC. O ODS 18 utiliza, provisoriamente, uma refer&ecirc;ncia municipal
+                    demonstrativa, pois ainda n&atilde;o possui correspond&ecirc;ncia na base externa.
                   </p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
@@ -395,7 +519,7 @@
                     outline
                     color="green-9"
                     icon="open_in_new"
-                    label="Abrir perfil IDSC"
+                    label="Consultar perfil no IDSC"
                     no-caps
                     :href="idscProfileUrl"
                     target="_blank"
@@ -403,7 +527,7 @@
                   <q-btn
                     color="green-9"
                     icon="refresh"
-                    label="Atualizar"
+                    label="Atualizar dados"
                     no-caps
                     :loading="semaphoreLoading"
                     @click="loadIdscSemaphore"
@@ -427,7 +551,7 @@
 
               <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <span class="vc-admin-status">{{ semaphoreSourceLabel }}</span>
-                <span v-if="semaphoreUpdatedAt">Atualizado em {{ semaphoreUpdatedAt }}</span>
+                <span v-if="semaphoreUpdatedAt">&Uacute;ltima atualiza&ccedil;&atilde;o: {{ semaphoreUpdatedAt }}</span>
                 <span v-if="semaphoreError" class="text-red-700">{{ semaphoreError }}</span>
               </div>
 
@@ -441,19 +565,19 @@
                 <div class="flex items-start justify-between gap-4">
                   <div>
                     <p class="text-xs font-bold uppercase tracking-wide text-[#1d6d13]">
-                      Leitura geral
+                      Panorama consolidado
                     </p>
-                    <p class="vc-admin-section-title text-slate-950">Sem&aacute;foro ODS</p>
+                    <p class="vc-admin-section-title text-slate-950">Distribui&ccedil;&atilde;o por faixa de desempenho</p>
                     <p class="mt-2 text-sm leading-6 text-slate-500">
-                      Distribui&ccedil;&atilde;o dos objetivos por situa&ccedil;&atilde;o de
-                      acompanhamento.
+                      S&iacute;ntese dos objetivos segundo o grau de prioridade para acompanhamento
+                      pela gest&atilde;o municipal.
                     </p>
                   </div>
                   <span class="vc-admin-status">{{ semaphoreGoals.length }} ODS</span>
                 </div>
 
                 <div class="mt-5 grid gap-5 sm:grid-cols-[92px_minmax(0,1fr)] xl:grid-cols-1">
-                  <div class="vc-admin-traffic-light" aria-label="Semaforo ODS">
+                  <div class="vc-admin-traffic-light" aria-label="Classifica&ccedil;&atilde;o de desempenho dos ODS">
                     <span
                       v-for="item in semaphoreSummary"
                       :key="item.status"
@@ -497,19 +621,19 @@
                 <div class="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p class="text-xs font-bold uppercase tracking-wide text-[#1d6d13]">
-                      Mapa de prioridades
+                      An&aacute;lise comparativa
                     </p>
                     <p class="vc-admin-section-title text-slate-950">
-                      Pontua&ccedil;&atilde;o por ODS
+                      Desempenho por objetivo
                     </p>
                     <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                      Quanto menor a pontua&ccedil;&atilde;o, maior a prioridade de acompanhamento
-                      na gest&atilde;o.
+                      Pontua&ccedil;&otilde;es mais baixas indicam maior necessidade de an&aacute;lise,
+                      articula&ccedil;&atilde;o institucional e resposta da gest&atilde;o municipal.
                     </p>
                   </div>
                   <div class="text-right">
                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      M&eacute;dia
+                      M&eacute;dia geral
                     </p>
                     <p class="text-2xl font-black leading-none text-slate-950">
                       {{ semaphoreAverage }}
@@ -562,12 +686,12 @@
               <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p class="text-xs font-bold uppercase tracking-wide text-[#1d6d13]">
-                    Grade operacional
+                    Vis&atilde;o detalhada
                   </p>
-                  <p class="vc-admin-section-title text-slate-950">ODS por cor de acompanhamento</p>
+                  <p class="vc-admin-section-title text-slate-950">Classifica&ccedil;&atilde;o individual dos ODS</p>
                   <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                    Use esta leitura para priorizar curadoria, solicita&ccedil;&atilde;o de novas
-                    fontes e revis&atilde;o de indicadores vinculados.
+                    Utilize esta leitura como subs&iacute;dio para orientar a curadoria dos dados,
+                    qualificar as fontes e revisar os indicadores associados a cada objetivo.
                   </p>
                 </div>
                 <span class="vc-admin-status">Escala 0-100</span>
@@ -602,7 +726,7 @@
                   </div>
                   <div class="mt-4">
                     <div class="flex items-center justify-between gap-3 text-xs">
-                      <span class="font-semibold text-slate-500">Pontua&ccedil;&atilde;o</span>
+                      <span class="font-semibold text-slate-500">&Iacute;ndice de desempenho</span>
                       <strong class="text-slate-950">{{ formatScore(goal.score) }}</strong>
                     </div>
                     <div class="mt-2 h-2.5 overflow-hidden rounded-full bg-white">
@@ -632,16 +756,17 @@
               icon="flag"
             />
 
-            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <article
+            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <RouterLink
                 v-for="goal in managedGoals"
                 :key="goal.id"
-                class="vc-managed-goal-card rounded-md border border-slate-200 bg-white p-4 shadow-sm"
+                :to="`/ods/${goal.id}`"
+                class="vc-managed-goal-card"
                 :style="{ '--goal-accent': getGoalAccent(goal.id) }"
+                :aria-label="`Monitorar ODS ${goal.id} - ${goal.title}`"
               >
-                <div class="vc-managed-goal-card-bar" />
-                <div class="flex gap-4">
-                  <div class="vc-managed-goal-thumb h-16 w-16 shrink-0 overflow-hidden rounded-md">
+                <div class="vc-managed-goal-content">
+                  <div class="vc-managed-goal-thumb">
                     <img
                       :src="getGoalImage(goal.id)"
                       :alt="goal.title"
@@ -649,30 +774,31 @@
                     />
                   </div>
                   <div class="min-w-0 flex-1">
-                    <p class="vc-managed-goal-badge">
-                      ODS {{ goal.id }}
-                    </p>
-                    <p class="mt-3 text-base font-bold leading-snug text-slate-950">
+                    <p class="vc-managed-goal-badge">ODS {{ goal.id }}</p>
+                    <p class="vc-managed-goal-title">
                       {{ goal.title }}
                     </p>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">{{ goal.focus }}</p>
                   </div>
+                  <span class="vc-managed-goal-link-icon" aria-hidden="true">
+                    <q-icon name="arrow_forward" size="17px" />
+                  </span>
                 </div>
-                <div class="mt-5 grid grid-cols-3 gap-2">
+                <p class="vc-managed-goal-description">{{ goal.focus }}</p>
+                <div class="vc-managed-goal-stats" aria-label="Resumo de cadastros do objetivo">
                   <div class="vc-managed-goal-stat">
                     <strong>{{ goal.targets }}</strong>
-                    <span>metas</span>
+                    <span>{{ countLabel(goal.targets, 'meta', 'metas') }}</span>
                   </div>
                   <div class="vc-managed-goal-stat">
                     <strong>{{ goal.indicators }}</strong>
-                    <span>indicadores</span>
+                    <span>{{ countLabel(goal.indicators, 'indicador', 'indicadores') }}</span>
                   </div>
                   <div class="vc-managed-goal-stat">
                     <strong>{{ goal.sources }}</strong>
-                    <span>fontes</span>
+                    <span>{{ countLabel(goal.sources, 'fonte', 'fontes') }}</span>
                   </div>
                 </div>
-              </article>
+              </RouterLink>
             </div>
           </section>
 
@@ -765,35 +891,303 @@
               icon="track_changes"
             />
 
-            <div class="grid gap-3 lg:grid-cols-2">
-              <article
-                v-for="target in localTargets"
-                :key="target.code"
-                class="rounded-md border border-slate-200 bg-white p-5 shadow-sm"
+            <article class="vc-target-toolbar">
+              <div>
+                <p class="text-sm font-bold text-slate-950">
+                  {{ localTargets.length }}
+                  {{ countLabel(localTargets.length, 'meta cadastrada', 'metas cadastradas') }}
+                </p>
+                <p class="mt-1 text-xs leading-5 text-slate-500">
+                  Localize uma meta existente ou crie uma nova prioridade municipal.
+                </p>
+              </div>
+              <div class="vc-target-toolbar-actions">
+                <q-input
+                  v-model="targetSearch"
+                  class="vc-target-search"
+                  outlined
+                  dense
+                  clearable
+                  debounce="180"
+                  placeholder="Buscar meta"
+                  aria-label="Buscar meta local"
+                >
+                  <template #prepend><q-icon name="search" size="18px" /></template>
+                </q-input>
+                <q-select
+                  v-model="targetGoalFilter"
+                  class="vc-target-filter"
+                  :options="targetGoalOptions"
+                  option-label="label"
+                  option-value="value"
+                  emit-value
+                  map-options
+                  clearable
+                  outlined
+                  dense
+                  label="Filtrar por ODS"
+                />
+                <q-btn
+                  color="green-9"
+                  icon="add"
+                  label="Nova meta"
+                  no-caps
+                  unelevated
+                  @click="openCreateTarget"
+                />
+              </div>
+            </article>
+
+            <div class="space-y-5">
+              <section
+                v-for="group in groupedLocalTargets"
+                :key="group.goalId"
+                class="vc-target-group"
+                :style="{ '--goal-accent': getGoalAccent(group.goalId) }"
               >
-                <div class="flex items-start justify-between gap-3">
-                  <span class="vc-admin-code">{{ target.code }}</span>
-                  <span class="vc-admin-status">{{ target.priority }}</span>
-                </div>
-                <p class="mt-3 text-sm font-bold text-slate-950">{{ target.title }}</p>
-                <p class="mt-2 text-sm leading-6 text-slate-600">{{ target.text }}</p>
-                <div class="mt-4 grid gap-2 text-xs text-slate-500 sm:grid-cols-2">
-                  <span
-                    >Respons&aacute;vel: <strong>{{ target.owner }}</strong></span
+                <header class="vc-target-group-header">
+                  <div class="flex min-w-0 items-center gap-3">
+                    <span class="vc-target-group-marker" aria-hidden="true" />
+                    <p class="vc-target-group-number">ODS {{ group.goalId }}</p>
+                    <span class="vc-target-group-separator" aria-hidden="true">&middot;</span>
+                    <p role="heading" aria-level="3" class="vc-target-group-title">{{ group.goalTitle }}</p>
+                  </div>
+                  <span class="vc-target-group-count">
+                    {{ group.targets.length }}
+                    {{ countLabel(group.targets.length, 'meta', 'metas') }}
+                  </span>
+                </header>
+
+                <div
+                  class="mt-3 grid gap-3"
+                  :class="group.targets.length > 1 ? 'lg:grid-cols-2' : 'grid-cols-1'"
+                >
+                  <article
+                    v-for="target in group.targets"
+                    :key="target.id || target.code"
+                    class="vc-local-target-card"
+                    :style="{ '--goal-accent': getGoalAccent(target.goalId) }"
                   >
-                  <span
-                    >Prazo: <strong>{{ target.deadline }}</strong></span
-                  >
+                    <div class="flex items-start justify-between gap-3">
+                      <span class="vc-local-target-code">Meta {{ target.code }}</span>
+                      <div class="flex shrink-0 items-center gap-1">
+                        <span class="vc-admin-status">{{ target.priority }}</span>
+                        <q-btn
+                          v-if="target.id"
+                          flat
+                          round
+                          dense
+                          icon="more_vert"
+                          color="grey-7"
+                          :aria-label="`Ações da meta ${target.code}`"
+                        >
+                          <q-menu auto-close anchor="bottom right" self="top right">
+                            <q-list class="min-w-[170px]" padding dense>
+                              <q-item clickable @click="openEditTarget(target)">
+                                <q-item-section avatar><q-icon name="edit" size="18px" /></q-item-section>
+                                <q-item-section>Editar meta</q-item-section>
+                              </q-item>
+                              <q-item clickable class="text-red-7" @click="openDeleteTarget(target)">
+                                <q-item-section avatar><q-icon name="delete_outline" size="18px" /></q-item-section>
+                                <q-item-section>Excluir meta</q-item-section>
+                              </q-item>
+                            </q-list>
+                          </q-menu>
+                        </q-btn>
+                      </div>
+                    </div>
+                    <p class="mt-4 text-sm font-bold text-slate-950">{{ target.title }}</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">{{ target.text }}</p>
+                    <div class="vc-local-target-meta">
+                      <span
+                        >Respons&aacute;vel: <strong>{{ target.owner }}</strong></span
+                      >
+                      <span
+                        >Prazo: <strong>{{ target.deadline }}</strong></span
+                      >
+                    </div>
+                  </article>
                 </div>
-              </article>
+              </section>
             </div>
+
+            <article v-if="!groupedLocalTargets.length" class="vc-target-empty">
+              <span class="vc-admin-section-icon"><q-icon name="search_off" size="20px" /></span>
+              <p class="mt-3 text-sm font-bold text-slate-950">Nenhuma meta encontrada</p>
+              <p class="mt-1 text-xs leading-5 text-slate-500">
+                Revise o termo pesquisado ou cadastre uma nova meta local.
+              </p>
+              <q-btn
+                v-if="targetSearch || targetGoalFilter"
+                class="mt-4"
+                outline
+                color="green-9"
+                icon="filter_alt_off"
+                label="Limpar filtros"
+                no-caps
+                @click="clearTargetFilters"
+              />
+              <q-btn v-else class="mt-4" outline color="green-9" icon="add" label="Nova meta" no-caps @click="openCreateTarget" />
+            </article>
+
+            <q-dialog v-model="targetDialogOpen" persistent>
+              <q-card class="vc-target-dialog">
+                <q-card-section class="vc-target-dialog-header">
+                  <div class="min-w-0">
+                    <p class="text-[11px] font-bold uppercase tracking-[0.06em] text-green-9">
+                      Metas locais
+                    </p>
+                    <p class="mt-1.5 text-xl font-bold leading-tight text-slate-950">
+                      {{ editingTargetId ? 'Editar meta local' : 'Cadastrar meta local' }}
+                    </p>
+                    <p class="mt-2 max-w-xl text-sm leading-5 text-slate-500">
+                      Informe o resultado esperado, o prazo e a área responsável pelo acompanhamento.
+                    </p>
+                  </div>
+                  <q-btn class="vc-target-dialog-close" flat round dense icon="close" aria-label="Fechar formulário" @click="closeTargetDialog" />
+                </q-card-section>
+
+                <q-separator />
+
+                <q-form class="vc-target-dialog-form" @submit="saveTarget">
+                  <q-card-section class="vc-target-dialog-body">
+                    <section class="vc-target-form-section">
+                      <div class="vc-target-form-section-heading">
+                        <p>Identificação</p>
+                        <span>* Campos obrigatórios</span>
+                      </div>
+                      <div class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                        <q-select
+                          v-model="targetForm.goalId"
+                          :options="targetGoalOptions"
+                          label="ODS vinculado *"
+                          option-label="label"
+                          option-value="value"
+                          emit-value
+                          map-options
+                          outlined
+                          dense
+                          autofocus
+                          :rules="[requiredRule]"
+                        />
+                        <q-input
+                          v-model.trim="targetForm.code"
+                          label="Código da meta *"
+                          hint="Exemplo: 3.1 VC"
+                          maxlength="40"
+                          outlined
+                          dense
+                          :rules="[requiredRule]"
+                        />
+                        <q-input
+                          v-model.trim="targetForm.title"
+                          class="sm:col-span-2"
+                          label="Título da meta *"
+                          maxlength="180"
+                          outlined
+                          dense
+                          :rules="[requiredRule]"
+                        />
+                        <q-input
+                          v-model.trim="targetForm.description"
+                          class="sm:col-span-2"
+                          label="Descrição do resultado esperado *"
+                          type="textarea"
+                          rows="3"
+                          maxlength="700"
+                          outlined
+                          dense
+                          :rules="[requiredRule]"
+                        />
+                      </div>
+                    </section>
+
+                    <section class="vc-target-form-section">
+                      <div class="vc-target-form-section-heading">
+                        <p>Planejamento e responsabilidade</p>
+                      </div>
+                      <div class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                        <q-input
+                          v-model.trim="targetForm.deadline"
+                          label="Prazo *"
+                          hint="Exemplo: 2030 ou Contínuo"
+                          maxlength="40"
+                          outlined
+                          dense
+                          :rules="[requiredRule]"
+                        />
+                        <q-select
+                          v-model="targetForm.priority"
+                          :options="targetPriorityOptions"
+                          label="Prioridade *"
+                          option-label="label"
+                          option-value="value"
+                          emit-value
+                          map-options
+                          outlined
+                          dense
+                          :rules="[requiredRule]"
+                        />
+                        <q-select
+                          v-model="targetForm.departmentId"
+                          class="sm:col-span-2"
+                          :options="targetDepartmentOptions"
+                          label="Secretaria responsável"
+                          option-label="label"
+                          option-value="value"
+                          emit-value
+                          map-options
+                          clearable
+                          outlined
+                          dense
+                          hint="Opcional. Identifica a área responsável pela política."
+                        />
+                      </div>
+                    </section>
+                  </q-card-section>
+
+                  <q-separator />
+
+                  <q-card-actions align="right" class="vc-target-dialog-actions">
+                    <q-btn flat color="grey-8" label="Cancelar" no-caps @click="closeTargetDialog" />
+                    <q-btn
+                      color="green-9"
+                      icon="check"
+                      :label="editingTargetId ? 'Salvar alterações' : 'Cadastrar meta'"
+                      no-caps
+                      unelevated
+                      type="submit"
+                      :loading="adminSaving"
+                    />
+                  </q-card-actions>
+                </q-form>
+              </q-card>
+            </q-dialog>
+
+            <q-dialog v-model="deleteTargetDialogOpen" persistent>
+              <q-card class="w-full max-w-md rounded-lg">
+                <q-card-section class="flex gap-4">
+                  <span class="vc-target-delete-icon"><q-icon name="delete_outline" size="22px" /></span>
+                  <div class="min-w-0">
+                    <p class="text-base font-bold text-slate-950">Excluir meta local?</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">
+                      A meta <strong>{{ targetPendingDelete?.code }}</strong> será removida. Indicadores vinculados permanecerão cadastrados, mas perderão esse vínculo.
+                    </p>
+                  </div>
+                </q-card-section>
+                <q-card-actions align="right" class="gap-2 border-t border-slate-100 p-4">
+                  <q-btn flat color="grey-8" label="Cancelar" no-caps @click="deleteTargetDialogOpen = false" />
+                  <q-btn color="red-7" icon="delete" label="Excluir meta" no-caps unelevated :loading="adminSaving" @click="deleteTarget" />
+                </q-card-actions>
+              </q-card>
+            </q-dialog>
           </section>
 
           <section v-else-if="activeSection === 'acoes'" key="acoes" class="space-y-5">
             <AdminSectionHeader
               eyebrow="A&ccedil;&otilde;es"
-              title="Criar a&ccedil;&atilde;o vinculada aos ODS"
-              text="Registre a secretaria respons&aacute;vel, peso, nome, descri&ccedil;&atilde;o e o ODS que ser&aacute; fortalecido pela iniciativa."
+              title="Criar a&ccedil;&atilde;o vinculada a indicadores"
+              text="Registre a iniciativa, selecione o ODS e informe quais indicadores ela pretende influenciar. A evolu&ccedil;&atilde;o ser&aacute; medida pelos lan&ccedil;amentos peri&oacute;dicos."
               icon="add_task"
             />
 
@@ -829,6 +1223,48 @@
                     min="1"
                     max="5"
                   />
+                  <q-select
+                    v-model="actionForm.indicatorIds"
+                    :options="actionIndicatorOptions"
+                    class="md:col-span-2"
+                    label="Indicadores que a ação pretende influenciar"
+                    emit-value
+                    map-options
+                    multiple
+                    use-chips
+                    outlined
+                    dense
+                    :disable="!actionIndicatorOptions.length"
+                    :hint="actionIndicatorOptions.length ? 'Selecione um ou mais indicadores do ODS escolhido.' : 'Cadastre um indicador para este ODS antes de publicar a ação.'"
+                  />
+                </div>
+
+                <div v-if="selectedActionIndicators.length" class="vc-action-influence-editor mt-4">
+                  <div class="mb-3">
+                    <p class="text-sm font-bold text-slate-950">Efeito esperado sobre cada indicador</p>
+                    <p class="mt-1 text-xs leading-5 text-slate-500">
+                      Informe a direção que a ação pretende produzir. O resultado real será calculado pelos valores lançados.
+                    </p>
+                  </div>
+                  <div
+                    v-for="indicator in selectedActionIndicators"
+                    :key="indicator.id"
+                    class="vc-action-influence-row"
+                  >
+                    <div class="min-w-0">
+                      <p class="text-sm font-bold text-slate-950">{{ indicator.name }}</p>
+                      <p class="mt-1 text-xs text-slate-500">{{ polarityFromApi[indicator.polarity] ?? indicator.polarity }}</p>
+                    </div>
+                    <q-select
+                      v-model="actionForm.indicatorEffects[indicator.id]"
+                      :options="expectedEffectOptions"
+                      emit-value
+                      map-options
+                      outlined
+                      dense
+                      label="Efeito esperado"
+                    />
+                  </div>
                 </div>
 
                 <div class="mt-4 rounded-md border border-slate-100 bg-slate-50 p-4">
@@ -892,6 +1328,9 @@
                       <p class="mt-2 text-xs leading-5 text-slate-500">
                         {{ actionForm.department }} &middot; peso {{ actionForm.weight }}
                       </p>
+                      <p v-if="selectedActionIndicators.length" class="mt-2 text-xs font-semibold leading-5 text-emerald-800">
+                        {{ selectedActionIndicators.length }} {{ selectedActionIndicators.length === 1 ? 'indicador relacionado' : 'indicadores relacionados' }}
+                      </p>
                     </div>
                   </div>
                   <p class="mt-4 text-sm leading-6 text-slate-600">
@@ -919,6 +1358,11 @@
                       <p class="mt-3 text-xs leading-5 text-slate-600">
                         {{ action.description }}
                       </p>
+                      <div v-if="action.indicators.length" class="mt-3 flex flex-wrap gap-1.5">
+                        <span v-for="indicator in action.indicators" :key="indicator" class="vc-admin-status">
+                          {{ indicator }}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </article>
@@ -1047,12 +1491,21 @@
                 <div class="mt-4 flex flex-wrap justify-end gap-2">
                   <q-btn outline color="grey-8" icon="drafts" label="Salvar rascunho" no-caps :loading="adminSaving" @click="saveObservation('DRAFT')" />
                   <q-btn
+                    outline
                     color="green-9"
-                    icon="task_alt"
+                    icon="fact_check"
                     label="Enviar para valida&ccedil;&atilde;o"
                     no-caps
                     :loading="adminSaving"
                     @click="saveObservation('REVIEW')"
+                  />
+                  <q-btn
+                    color="green-9"
+                    icon="publish"
+                    label="Publicar lan&ccedil;amento"
+                    no-caps
+                    :loading="adminSaving"
+                    @click="saveObservation('PUBLISHED')"
                   />
                 </div>
               </article>
@@ -1081,10 +1534,12 @@
 <script setup lang="ts">
 import { computed, defineComponent, h, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import { useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth-store';
 
 type AdminSection =
   | 'visao'
+  | 'triagem'
   | 'semaforo'
   | 'objetivos'
   | 'indicadores'
@@ -1139,7 +1594,9 @@ const AdminSectionHeader = defineComponent({
   },
 });
 
-const activeSection = ref<AdminSection>('visao');
+const route = useRoute();
+const initialSection = typeof route.query.section === 'string' ? route.query.section : 'visao';
+const activeSection = ref<AdminSection>(initialSection === 'triagem' ? 'triagem' : 'visao');
 const auth = useAuthStore();
 const $q = useQuasar();
 const adminSaving = ref(false);
@@ -1159,9 +1616,15 @@ const adminSections = [
   },
   {
     id: 'semaforo',
-    label: 'Sem\u00e1foro ODS',
-    caption: 'Tranquilo, aten\u00e7\u00e3o e alerta',
+    label: 'Monitoramento ODS',
+    caption: 'Faixas de desempenho',
     icon: 'traffic',
+  },
+  {
+    id: 'triagem',
+    label: 'Triagem',
+    caption: 'Notícias para ações',
+    icon: 'fact_check',
   },
   { id: 'objetivos', label: 'Objetivos ODS', caption: 'Temas municipais', icon: 'flag' },
   {
@@ -1188,26 +1651,26 @@ const adminSections = [
 
 const semaphoreMeta: Record<SemaphoreStatus, { label: string; color: string; text: string }> = {
   tranquilo: {
-    label: 'Tranquilo',
+    label: 'Desempenho satisfat\u00f3rio',
     color: '#1d6d13',
-    text: 'Pontua\u00e7\u00e3o igual ou superior a 60 pontos.',
+    text: 'Pontua\u00e7\u00e3o igual ou superior a 60 pontos, indicando resultado comparativamente favor\u00e1vel.',
   },
   atencao: {
-    label: 'Aten\u00e7\u00e3o',
+    label: 'Acompanhamento priorit\u00e1rio',
     color: '#d99b16',
-    text: 'Pontua\u00e7\u00e3o entre 50 e 59,99 pontos.',
+    text: 'Pontua\u00e7\u00e3o entre 50 e 59,99 pontos, recomendando monitoramento e medidas de aprimoramento.',
   },
   alerta: {
-    label: 'Alerta',
+    label: 'Situa\u00e7\u00e3o cr\u00edtica',
     color: '#d64545',
-    text: 'Pontua\u00e7\u00e3o abaixo de 50 pontos.',
+    text: 'Pontua\u00e7\u00e3o inferior a 50 pontos, demandando an\u00e1lise aprofundada e resposta priorit\u00e1ria.',
   },
 };
 
 const semaphoreRules = [
-  { ...semaphoreMeta.tranquilo, label: 'Verde - tranquilo', status: 'tranquilo' },
-  { ...semaphoreMeta.atencao, label: 'Amarelo - aten\u00e7\u00e3o', status: 'atencao' },
-  { ...semaphoreMeta.alerta, label: 'Vermelho - alerta', status: 'alerta' },
+  { ...semaphoreMeta.tranquilo, label: 'Verde \u2014 desempenho satisfat\u00f3rio', status: 'tranquilo' },
+  { ...semaphoreMeta.atencao, label: 'Amarelo \u2014 acompanhamento priorit\u00e1rio', status: 'atencao' },
+  { ...semaphoreMeta.alerta, label: 'Vermelho \u2014 situa\u00e7\u00e3o cr\u00edtica', status: 'alerta' },
 ] satisfies Array<{
   label: string;
   status: SemaphoreStatus;
@@ -1337,7 +1800,7 @@ const semaphoreRankedGoals = computed(() =>
 );
 
 const semaphoreSourceLabel = computed(() =>
-  semaphoreLoaded.value ? 'Dados IDSC carregados' : 'Leitura demonstrativa',
+  semaphoreLoaded.value ? 'Dados atualizados pelo IDSC' : 'Dados demonstrativos locais',
 );
 
 const coverageByAxis = [
@@ -1510,38 +1973,79 @@ const indicators = ref([
   },
 ]);
 
-const localTargets = ref([
+type TargetPriority = 'HIGH' | 'MEDIUM' | 'CONTINUOUS';
+
+interface LocalTarget {
+  id: string;
+  goalId: number;
+  code: string;
+  title: string;
+  text: string;
+  owner: string;
+  deadline: string;
+  priority: string;
+  priorityValue: TargetPriority;
+  departmentId: string | null;
+}
+
+interface TargetFormState {
+  goalId: number | null;
+  code: string;
+  title: string;
+  description: string;
+  deadline: string;
+  priority: TargetPriority;
+  departmentId: string | null;
+}
+
+const localTargets = ref<LocalTarget[]>([
   {
+    id: '',
+    goalId: 1,
     code: '1.2 VC',
     title: 'Reduzir vulnerabilidades sociais priorit\u00e1rias',
     text: 'Monitorar renda, moradia, seguran\u00e7a alimentar e acesso a servi\u00e7os essenciais por territ\u00f3rio.',
     owner: 'Desenvolvimento Social',
     deadline: '2030',
     priority: 'Alta',
+    priorityValue: 'HIGH',
+    departmentId: null,
   },
   {
+    id: '',
+    goalId: 4,
     code: '4.1 VC',
     title: 'Ampliar perman\u00eancia e aprendizagem',
     text: 'Acompanhar fluxo escolar, frequ\u00eancia, alfabetiza\u00e7\u00e3o e indicadores de qualidade da educa\u00e7\u00e3o.',
     owner: 'Educa\u00e7\u00e3o',
     deadline: '2028',
     priority: 'Alta',
+    priorityValue: 'HIGH',
+    departmentId: null,
   },
   {
+    id: '',
+    goalId: 11,
     code: '11.3 VC',
     title: 'Qualificar planejamento urbano',
     text: 'Integrar habita\u00e7\u00e3o, mobilidade, infraestrutura e participa\u00e7\u00e3o social no acompanhamento urbano.',
     owner: 'Infraestrutura',
     deadline: '2030',
     priority: 'M\u00e9dia',
+    priorityValue: 'MEDIUM',
+    departmentId: null,
   },
   {
+    id: '',
+    goalId: 16,
     code: '16.6 VC',
     title: 'Fortalecer transpar\u00eancia institucional',
     text: 'Publicar evid\u00eancias, fontes e s\u00e9ries hist\u00f3ricas de forma acess\u00edvel e rastre\u00e1vel.',
     owner: 'Administra\u00e7\u00e3o',
     deadline: 'Cont\u00ednuo',
     priority: 'M\u00e9dia',
+    priorityValue: 'MEDIUM',
+    departmentId: null,
   },
 ]);
 
@@ -1598,6 +2102,7 @@ const municipalActions = ref([
     department: 'Secretaria Municipal de Desenvolvimento Social',
     goal: 'ODS 1',
     weight: 5,
+    indicators: [] as string[],
     description:
       'Mapeia fam\u00edlias em maior vulnerabilidade para priorizar acesso a benef\u00edcios, servi\u00e7os e acompanhamento territorial.',
   },
@@ -1606,6 +2111,7 @@ const municipalActions = ref([
     department: 'Secretaria Municipal de Educa\u00e7\u00e3o',
     goal: 'ODS 4',
     weight: 4,
+    indicators: [] as string[],
     description:
       'Acompanha frequ\u00eancia e fluxo escolar para reduzir abandono e fortalecer aprendizagem na rede municipal.',
   },
@@ -1614,6 +2120,7 @@ const municipalActions = ref([
     department: 'Secretaria Municipal de Infraestrutura Urbana',
     goal: 'ODS 6',
     weight: 4,
+    indicators: [] as string[],
     description:
       'Organiza demandas e evid\u00eancias sobre abastecimento, drenagem e esgotamento em bairros e distritos.',
   },
@@ -1663,6 +2170,8 @@ const actionForm = ref({
   department: departmentOptions.value[0],
   goal: goalOptions.value[0],
   weight: 3,
+  indicatorIds: [] as string[],
+  indicatorEffects: {} as Record<string, 'INCREASE' | 'DECREASE' | 'MAINTAIN'>,
   description:
     'A\u00e7\u00e3o demonstrativa para registrar a iniciativa, sua secretaria respons\u00e1vel e o ODS diretamente impactado.',
 });
@@ -1685,45 +2194,285 @@ const selectedActionGoal = computed(() => {
 
 interface ApiGoal { id: number; title: string; localFocus: string }
 interface ApiDepartment { id: string; name: string }
-interface ApiTarget { id: string; code: string; title: string; description: string; deadline: string; priority: string; goalId: number; department?: ApiDepartment | null }
-interface ApiIndicator { id: string; name: string; description: string; frequency: string; status: string; goalId: number; target?: { code: string } | null; goal: ApiGoal }
+interface ApiTarget { id: string; code: string; title: string; description: string; deadline: string; priority: TargetPriority; goalId: number; departmentId?: string | null; department?: ApiDepartment | null }
+interface ApiIndicator { id: string; name: string; description: string; unit: string; frequency: string; polarity: 'HIGHER_IS_BETTER' | 'LOWER_IS_BETTER' | 'CONTEXTUAL'; status: string; goalId: number; target?: { code: string } | null; goal: ApiGoal }
 interface ApiSource { id: string; name: string; description?: string | null; frequency: string; status: string }
 interface ApiObservation { id: string; period: string; displayValue?: string | null; value: string; status: string; indicator: { name: string; goalId: number }; source: ApiSource }
-interface ApiAction { id: string; name: string; description: string; weight: number; goalId: number; department: ApiDepartment }
+interface ApiAction { id: string; name: string; description: string; weight: number; goalId: number; department: ApiDepartment; indicatorLinks: Array<{ expectedEffect: 'INCREASE' | 'DECREASE' | 'MAINTAIN'; indicator: ApiIndicator }> }
+type NewsTriageStatus = 'PENDING' | 'CONVERTED' | 'DISMISSED';
+interface ApiTriageNews {
+  id: string;
+  title: string;
+  imageUrl?: string | null;
+  source: string;
+  publishedAt?: string | null;
+  publishedLabel?: string | null;
+  primaryGoalId?: number | null;
+  triageStatus: NewsTriageStatus;
+  action?: { id: string; name: string; status: 'DRAFT' | 'REVIEW' | 'PUBLISHED' | 'ARCHIVED' } | null;
+}
 
 const apiDepartments = ref<ApiDepartment[]>([]);
 const apiIndicators = ref<ApiIndicator[]>([]);
 const apiSources = ref<ApiSource[]>([]);
+const triageNews = ref<ApiTriageNews[]>([]);
+const targetSearch = ref<string | null>('');
+const targetGoalFilter = ref<number | null>(null);
+const targetDialogOpen = ref(false);
+const deleteTargetDialogOpen = ref(false);
+const editingTargetId = ref<string | null>(null);
+const targetPendingDelete = ref<LocalTarget | null>(null);
+const targetForm = ref<TargetFormState>(emptyTargetForm());
+const targetPriorityOptions: Array<{ label: string; value: TargetPriority }> = [
+  { label: 'Alta', value: 'HIGH' },
+  { label: 'M\u00e9dia', value: 'MEDIUM' },
+  { label: 'Cont\u00ednua', value: 'CONTINUOUS' },
+];
+const expectedEffectOptions = [
+  { label: 'Aumentar o valor', value: 'INCREASE' as const },
+  { label: 'Reduzir o valor', value: 'DECREASE' as const },
+  { label: 'Manter o valor', value: 'MAINTAIN' as const },
+];
+const actionIndicatorOptions = computed(() => {
+  const goalId = selectedGoalId(actionForm.value.goal);
+  return apiIndicators.value
+    .filter((indicator) => indicator.goalId === goalId)
+    .map((indicator) => ({ label: indicator.name, value: indicator.id }));
+});
+const selectedActionIndicators = computed(() =>
+  actionForm.value.indicatorIds.flatMap((id) => {
+    const indicator = apiIndicators.value.find((item) => item.id === id);
+    return indicator ? [indicator] : [];
+  }),
+);
+
+function defaultExpectedEffect(polarity?: ApiIndicator['polarity']) {
+  if (polarity === 'LOWER_IS_BETTER') return 'DECREASE' as const;
+  if (polarity === 'CONTEXTUAL') return 'MAINTAIN' as const;
+  return 'INCREASE' as const;
+}
+
+watch(() => actionForm.value.goal, () => {
+  const validIds = new Set(actionIndicatorOptions.value.map((option) => option.value));
+  actionForm.value.indicatorIds = actionForm.value.indicatorIds.filter((id) => validIds.has(id));
+});
+
+watch(() => [...actionForm.value.indicatorIds], (ids) => {
+  const selectedIds = new Set(ids);
+  for (const id of Object.keys(actionForm.value.indicatorEffects)) {
+    if (!selectedIds.has(id)) delete actionForm.value.indicatorEffects[id];
+  }
+  for (const id of ids) {
+    if (!actionForm.value.indicatorEffects[id]) {
+      const polarity = apiIndicators.value.find((indicator) => indicator.id === id)?.polarity;
+      actionForm.value.indicatorEffects[id] = defaultExpectedEffect(polarity);
+    }
+  }
+});
+const targetGoalOptions = computed(() =>
+  managedGoals.value.map((goal) => ({ label: `ODS ${goal.id} - ${goal.title}`, value: goal.id })),
+);
+const targetDepartmentOptions = computed(() =>
+  apiDepartments.value.map((department) => ({ label: department.name, value: department.id })),
+);
+const filteredLocalTargets = computed(() => {
+  const query = normalizeSearch(targetSearch.value);
+  return localTargets.value.filter((target) => {
+    if (targetGoalFilter.value && target.goalId !== targetGoalFilter.value) return false;
+    if (!query) return true;
+
+    return normalizeSearch(
+      `ODS ${target.goalId} ${target.code} ${target.title} ${target.text} ${target.owner} ${target.deadline} ${target.priority}`,
+    ).includes(query);
+  });
+});
+const groupedLocalTargets = computed(() => {
+  const groups = new Map<number, LocalTarget[]>();
+  const sortedTargets = [...filteredLocalTargets.value].sort((current, next) =>
+    current.code.localeCompare(next.code, 'pt-BR', { numeric: true }),
+  );
+
+  for (const target of sortedTargets) {
+    const targets = groups.get(target.goalId) ?? [];
+    targets.push(target);
+    groups.set(target.goalId, targets);
+  }
+
+  return [...groups.entries()]
+    .sort(([currentGoalId], [nextGoalId]) => currentGoalId - nextGoalId)
+    .map(([goalId, targets]) => ({
+      goalId,
+      goalTitle: managedGoals.value.find((goal) => goal.id === goalId)?.title ?? `Objetivo ${goalId}`,
+      targets,
+    }));
+});
+const triageFilter = ref<'ALL' | NewsTriageStatus>('PENDING');
+const filteredTriageNews = computed(() => triageFilter.value === 'ALL'
+  ? triageNews.value
+  : triageNews.value.filter((item) => item.triageStatus === triageFilter.value));
+const triageCounts = computed(() => triageNews.value.reduce((counts, item) => {
+  counts[item.triageStatus] += 1;
+  return counts;
+}, { PENDING: 0, CONVERTED: 0, DISMISSED: 0 } as Record<NewsTriageStatus, number>));
 const frequencyToApi: Record<string, string> = { Mensal: 'MONTHLY', Bimestral: 'BIMONTHLY', Quadrimestral: 'FOUR_MONTHLY', Semestral: 'SEMIANNUAL', Anual: 'ANNUAL', 'Contínua': 'CONTINUOUS' };
 const frequencyFromApi: Record<string, string> = { MONTHLY: 'Mensal', BIMONTHLY: 'Bimestral', QUARTERLY: 'Trimestral', FOUR_MONTHLY: 'Quadrimestral', SEMIANNUAL: 'Semestral', ANNUAL: 'Anual', CONTINUOUS: 'Contínua' };
 const statusFromApi: Record<string, string> = { DRAFT: 'Rascunho', REVIEW: 'Em revisão', PUBLISHED: 'Publicado', ARCHIVED: 'Arquivado' };
-const priorityFromApi: Record<string, string> = { HIGH: 'Alta', MEDIUM: 'Média', CONTINUOUS: 'Contínua' };
+const priorityFromApi: Record<TargetPriority, string> = { HIGH: 'Alta', MEDIUM: 'Média', CONTINUOUS: 'Contínua' };
 const polarityToApi: Record<string, string> = { 'Quanto maior, melhor': 'HIGHER_IS_BETTER', 'Quanto menor, melhor': 'LOWER_IS_BETTER', Contextual: 'CONTEXTUAL' };
+const polarityFromApi: Record<string, string> = { HIGHER_IS_BETTER: 'Quanto maior, melhor', LOWER_IS_BETTER: 'Quanto menor, melhor', CONTEXTUAL: 'Indicador contextual' };
 
 async function loadAdminData() {
   try {
-    const [goals, departments, targets, indicatorRows, sourceRows, observations, actions] = await Promise.all([
+    const [goals, departments, targets, indicatorRows, sourceRows, observations, actions, newsRows] = await Promise.all([
       auth.request<ApiGoal[]>('/goals'), auth.request<ApiDepartment[]>('/departments'), auth.request<ApiTarget[]>('/targets'),
-      auth.request<ApiIndicator[]>('/indicators'), auth.request<ApiSource[]>('/sources'), auth.request<ApiObservation[]>('/observations'), auth.request<ApiAction[]>('/actions'),
+      auth.request<ApiIndicator[]>('/indicators'), auth.request<ApiSource[]>('/sources'), auth.request<ApiObservation[]>('/observations'), auth.request<ApiAction[]>('/actions'), auth.request<ApiTriageNews[]>('/news/triage'),
     ]);
     apiDepartments.value = departments; apiIndicators.value = indicatorRows; apiSources.value = sourceRows;
     departmentOptions.value = departments.map((item) => item.name);
-    managedGoals.value = goals.map((goal) => ({ id: goal.id, title: goal.title, focus: goal.localFocus, targets: targets.filter((item) => item.goalId === goal.id).length, indicators: indicatorRows.filter((item) => item.goalId === goal.id).length, sources: 0 }));
+    managedGoals.value = goals.map((goal) => ({
+      id: goal.id,
+      title: goal.title,
+      focus: goal.localFocus,
+      targets: targets.filter((item) => item.goalId === goal.id).length,
+      indicators: indicatorRows.filter((item) => item.goalId === goal.id).length,
+      sources: new Set(
+        observations
+          .filter((item) => item.indicator.goalId === goal.id)
+          .map((item) => item.source.id),
+      ).size,
+    }));
     indicators.value = indicatorRows.map((item) => ({ name: item.name, goal: `ODS ${item.goalId}`, target: item.target?.code ? `Meta local ${item.target.code}` : 'Sem meta vinculada', frequency: frequencyFromApi[item.frequency] ?? item.frequency, status: statusFromApi[item.status] ?? item.status, description: item.description }));
-    localTargets.value = targets.map((item) => ({ code: item.code, title: item.title, text: item.description, owner: item.department?.name ?? 'ObservaODS', deadline: item.deadline, priority: priorityFromApi[item.priority] ?? item.priority }));
+    localTargets.value = targets.map((item) => ({
+      id: item.id,
+      goalId: item.goalId,
+      code: item.code,
+      title: item.title,
+      text: item.description,
+      owner: item.department?.name ?? 'ObservaODS',
+      deadline: item.deadline,
+      priority: priorityFromApi[item.priority],
+      priorityValue: item.priority,
+      departmentId: item.departmentId ?? item.department?.id ?? null,
+    }));
     sources.value = sourceRows.map((item) => ({ name: item.name, description: item.description ?? '', frequency: frequencyFromApi[item.frequency] ?? item.frequency, status: statusFromApi[item.status] ?? item.status }));
     recentEntries.value = observations.slice(0, 8).map((item) => ({ indicator: item.indicator.name, goal: `ODS ${item.indicator.goalId}`, period: item.period, value: item.displayValue ?? String(item.value), status: statusFromApi[item.status] ?? item.status }));
-    municipalActions.value = actions.map((item) => ({ name: item.name, department: item.department.name, goal: `ODS ${item.goalId}`, weight: item.weight, description: item.description }));
+    municipalActions.value = actions.map((item) => ({ name: item.name, department: item.department.name, goal: `ODS ${item.goalId}`, weight: item.weight, description: item.description, indicators: item.indicatorLinks.map((link) => link.indicator.name) }));
+    triageNews.value = newsRows;
   } catch (error) { $q.notify({ type: 'negative', message: error instanceof Error ? error.message : 'Falha ao carregar o painel.' }); }
 }
 
 async function runSave(callback: () => Promise<unknown>, message: string) {
   adminSaving.value = true;
-  try { await callback(); $q.notify({ type: 'positive', message }); await loadAdminData(); }
-  catch (error) { $q.notify({ type: 'negative', message: error instanceof Error ? error.message : 'Não foi possível salvar.' }); }
-  finally { adminSaving.value = false; }
+  try {
+    await callback();
+    $q.notify({ type: 'positive', message });
+    await loadAdminData();
+    return true;
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error instanceof Error ? error.message : 'Não foi possível salvar.' });
+    return false;
+  } finally {
+    adminSaving.value = false;
+  }
 }
 function selectedGoalId(value?: string) { return Number(value?.match(/^ODS (\d+)/)?.[1]); }
+function countLabel(value: number, singular: string, plural: string) {
+  return value === 1 ? singular : plural;
+}
+function normalizeSearch(value: string | null | undefined = '') {
+  return (value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+function emptyTargetForm(): TargetFormState {
+  return {
+    goalId: null,
+    code: '',
+    title: '',
+    description: '',
+    deadline: '',
+    priority: 'MEDIUM',
+    departmentId: null,
+  };
+}
+function requiredRule(value: unknown) {
+  return (value !== null && value !== undefined && String(value).trim().length > 0) || 'Campo obrigatório.';
+}
+function openCreateTarget() {
+  editingTargetId.value = null;
+  targetForm.value = emptyTargetForm();
+  targetDialogOpen.value = true;
+}
+function clearTargetFilters() {
+  targetSearch.value = '';
+  targetGoalFilter.value = null;
+}
+function openEditTarget(target: LocalTarget) {
+  editingTargetId.value = target.id;
+  targetForm.value = {
+    goalId: target.goalId,
+    code: target.code,
+    title: target.title,
+    description: target.text,
+    deadline: target.deadline,
+    priority: target.priorityValue,
+    departmentId: target.departmentId,
+  };
+  targetDialogOpen.value = true;
+}
+function closeTargetDialog() {
+  if (adminSaving.value) return;
+  targetDialogOpen.value = false;
+  editingTargetId.value = null;
+  targetForm.value = emptyTargetForm();
+}
+function openDeleteTarget(target: LocalTarget) {
+  targetPendingDelete.value = target;
+  deleteTargetDialogOpen.value = true;
+}
+async function saveTarget() {
+  const form = targetForm.value;
+  if (!form.goalId) return;
+  const payload = {
+    goalId: form.goalId,
+    code: form.code,
+    title: form.title,
+    description: form.description,
+    deadline: form.deadline,
+    priority: form.priority,
+    departmentId: form.departmentId,
+  };
+  const targetId = editingTargetId.value;
+  const saved = await runSave(
+    () => auth.request(targetId ? `/targets/${targetId}` : '/targets', {
+      method: targetId ? 'PATCH' : 'POST',
+      body: JSON.stringify(payload),
+    }),
+    targetId ? 'Meta atualizada com sucesso.' : 'Meta cadastrada com sucesso.',
+  );
+  if (saved) closeTargetDialog();
+}
+async function deleteTarget() {
+  const target = targetPendingDelete.value;
+  if (!target?.id) return;
+  const deleted = await runSave(
+    () => auth.request(`/targets/${target.id}`, { method: 'DELETE' }),
+    'Meta excluída com sucesso.',
+  );
+  if (deleted) {
+    deleteTargetDialogOpen.value = false;
+    targetPendingDelete.value = null;
+  }
+}
+function formatTriageDate(value?: string | null) {
+  if (!value) return 'Data não informada';
+  return new Intl.DateTimeFormat('pt-BR').format(new Date(value));
+}
+function actionLaunchLabel(item: ApiTriageNews) {
+  if (!item.action) return 'Não';
+  if (item.action.status === 'PUBLISHED') return 'Sim · Publicada';
+  if (item.action.status === 'DRAFT') return 'Sim · Rascunho';
+  if (item.action.status === 'REVIEW') return 'Sim · Em revisão';
+  return 'Sim · Arquivada';
+}
 async function saveIndicator() {
   await runSave(() => auth.request('/indicators', { method: 'POST', body: JSON.stringify({ name: indicatorForm.value.name, description: indicatorForm.value.description, unit: indicatorForm.value.unit, frequency: frequencyToApi[indicatorForm.value.frequency], polarity: polarityToApi[indicatorForm.value.polarity], status: 'PUBLISHED', goalId: selectedGoalId(indicatorForm.value.goal) }) }), 'Indicador salvo.');
 }
@@ -1732,13 +2481,26 @@ async function saveSource() {
 }
 async function saveAction(status: 'DRAFT' | 'PUBLISHED') {
   const department = apiDepartments.value.find((item) => item.name === actionForm.value.department);
-  await runSave(() => auth.request('/actions', { method: 'POST', body: JSON.stringify({ name: actionForm.value.name, description: actionForm.value.description, weight: actionForm.value.weight, status, goalId: selectedGoalId(actionForm.value.goal), departmentId: department?.id }) }), status === 'DRAFT' ? 'Rascunho salvo.' : 'Ação criada.');
+  if (status === 'PUBLISHED' && !actionForm.value.indicatorIds.length) {
+    $q.notify({ type: 'warning', message: 'Relacione ao menos um indicador antes de publicar a ação.' });
+    return;
+  }
+  const indicatorLinks = actionForm.value.indicatorIds.map((indicatorId) => ({
+    indicatorId,
+    expectedEffect: actionForm.value.indicatorEffects[indicatorId] ?? defaultExpectedEffect(apiIndicators.value.find((item) => item.id === indicatorId)?.polarity),
+  }));
+  await runSave(() => auth.request('/actions', { method: 'POST', body: JSON.stringify({ name: actionForm.value.name, description: actionForm.value.description, weight: actionForm.value.weight, status, goalId: selectedGoalId(actionForm.value.goal), departmentId: department?.id, indicatorLinks }) }), status === 'DRAFT' ? 'Rascunho salvo.' : 'Ação criada e relacionada aos indicadores.');
 }
-async function saveObservation(status: 'DRAFT' | 'REVIEW') {
+async function saveObservation(status: 'DRAFT' | 'REVIEW' | 'PUBLISHED') {
   const indicator = apiIndicators.value.find((item) => item.name === entryForm.value.indicator);
   const source = apiSources.value.find((item) => item.name === entryForm.value.source);
   const normalized = entryForm.value.value.replace(/\./g, '').replace(',', '.');
-  await runSave(() => auth.request('/observations', { method: 'POST', body: JSON.stringify({ indicatorId: indicator?.id, sourceId: source?.id, territory: entryForm.value.territory, period: entryForm.value.period, value: Number(normalized), displayValue: entryForm.value.value, note: entryForm.value.note, status }) }), status === 'DRAFT' ? 'Rascunho salvo.' : 'Lançamento enviado para revisão.');
+  const message = status === 'DRAFT'
+    ? 'Rascunho salvo.'
+    : status === 'REVIEW'
+      ? 'Lançamento enviado para revisão.'
+      : 'Lançamento publicado e incluído no gráfico do indicador.';
+  await runSave(() => auth.request('/observations', { method: 'POST', body: JSON.stringify({ indicatorId: indicator?.id, sourceId: source?.id, territory: entryForm.value.territory, period: entryForm.value.period, value: Number(normalized), displayValue: entryForm.value.value, note: entryForm.value.note, status }) }), message);
 }
 
 onMounted(loadAdminData);
@@ -1842,7 +2604,7 @@ async function loadIdscSemaphore() {
     semaphoreLoaded.value = false;
     semaphoreUpdatedAt.value = '';
     semaphoreError.value =
-      'N\u00e3o foi poss\u00edvel consultar a API agora; exibindo leitura demonstrativa.';
+      'A consulta ao IDSC est\u00e1 temporariamente indispon\u00edvel. Os dados demonstrativos locais est\u00e3o sendo exibidos.';
   } finally {
     semaphoreLoading.value = false;
   }

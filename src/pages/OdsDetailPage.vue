@@ -5,9 +5,13 @@
       class="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:py-14"
       :style="{ '--ods-color': detail.color }"
     >
-      <RouterLink to="/" class="vc-about-back">
-        <q-icon name="west" size="18px" />
-        Voltar para o início
+      <RouterLink
+        to="/"
+        class="vc-about-back vc-back-icon-only"
+        aria-label="Voltar para o início"
+        title="Voltar para o início"
+      >
+        <q-icon name="chevron_left" size="28px" />
       </RouterLink>
 
       <section class="vc-ods-detail-hero mt-6">
@@ -47,7 +51,7 @@
         </aside>
       </section>
 
-      <section class="mt-8 grid items-stretch space-y-6 lg:grid-cols-[minmax(0,1fr)_390px]">
+      <section class="vc-ods-context-grid mt-8">
         <article class="vc-ods-detail-situation">
           <p class="text-xs font-black uppercase tracking-wide text-[#1d6d13]">
             Situação no município
@@ -73,18 +77,207 @@
         </article>
 
         <aside class="vc-ods-detail-actions">
-          <p class="text-xs font-black uppercase tracking-wide text-lime-200">Ações vinculadas</p>
-          <p class="mt-3 text-2xl font-black leading-tight text-white">O que acompanhar agora</p>
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p class="text-xs font-black uppercase tracking-wide text-lime-200">Ações vinculadas</p>
+              <p class="mt-3 text-2xl font-black leading-tight text-white">O que acompanhar agora</p>
+            </div>
+            <span v-if="detail.actions.length > 3" class="vc-ods-actions-scope">
+              {{ actionsExpanded ? 'Histórico completo' : 'Últimas 3' }}
+            </span>
+          </div>
           <div class="mt-5 space-y-3">
-            <div v-for="action in detail.actions" :key="action" class="vc-ods-detail-action">
+            <div v-for="action in visibleActions" :key="action.id" class="vc-ods-detail-action">
               <q-icon name="task_alt" size="18px" />
-              <span>{{ action }}</span>
+              <span class="min-w-0 flex-1">
+                <strong>{{ action.name }}</strong>
+                <em v-if="action.indicatorLinks.length">
+                  {{ actionInfluenceLabel(action) }}
+                </em>
+                <em v-else>Indicador ainda não definido</em>
+              </span>
+              <small>{{ action.weight }}/5</small>
             </div>
             <p v-if="!detail.actions.length" class="text-sm leading-6 text-white/65">
               Nenhuma ação publicada para este objetivo.
             </p>
           </div>
+          <div v-if="detail.actions.length > 3" class="vc-ods-actions-toggle-wrap">
+            <q-btn
+              class="vc-ods-actions-toggle"
+              flat
+              dense
+              no-caps
+              :icon-right="actionsExpanded ? 'expand_less' : 'expand_more'"
+              :label="actionsExpanded ? 'Mostrar somente as 3 últimas' : `Ver ${hiddenActionCount} ações anteriores`"
+              :aria-expanded="actionsExpanded"
+              @click="actionsExpanded = !actionsExpanded"
+            />
+          </div>
         </aside>
+      </section>
+
+      <section v-if="detail.actions.length > 1" class="vc-ods-action-progress mt-8">
+        <header class="vc-ods-action-progress-head">
+          <div>
+            <p class="text-xs font-black uppercase tracking-wide text-[#1d6d13]">
+              Evolução dos indicadores
+            </p>
+            <p role="heading" aria-level="2" class="vc-admin-section-title text-slate-950">
+              Resultados monitorados ao longo do tempo
+            </p>
+            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              A linha conecta os valores publicados de cada indicador. As ações relacionadas
+              aparecem como iniciativas que podem contribuir para o resultado observado.
+            </p>
+          </div>
+          <span v-if="selectedIndicator" class="vc-ods-action-trend" :class="indicatorTrend.className">
+            <q-icon :name="indicatorTrend.icon" size="18px" />
+            {{ indicatorTrend.label }}
+          </span>
+        </header>
+
+        <div v-if="selectedIndicator" class="mt-6 grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_290px]">
+          <article class="vc-ods-action-chart-card">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-black text-slate-950">{{ selectedIndicator.name }}</p>
+                <p class="mt-1 text-xs text-slate-500">
+                  {{ polarityLabel(selectedIndicator.polarity) }} · unidade: {{ selectedIndicator.unit }}
+                </p>
+              </div>
+              <q-select
+                v-if="indicatorChartOptions.length > 1"
+                v-model="selectedIndicatorId"
+                :options="indicatorChartOptions"
+                class="vc-ods-indicator-chart-select"
+                emit-value
+                map-options
+                outlined
+                dense
+                options-dense
+                label="Indicador exibido"
+              />
+              <span v-else class="vc-ods-action-chart-count">
+                {{ indicatorProgress.points.length }} períodos
+              </span>
+            </div>
+
+            <div ref="actionChartContainer" class="vc-ods-action-chart-scroll mt-4">
+              <svg
+                class="vc-ods-action-chart"
+                :viewBox="`0 0 ${indicatorProgress.width} ${indicatorProgress.height}`"
+                :style="{ width: `${indicatorProgress.width}px` }"
+                role="img"
+                :aria-label="`Evolução do indicador ${selectedIndicator.name} em ${indicatorProgress.points.length} períodos`"
+              >
+                <defs>
+                  <linearGradient id="indicatorProgressArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--ods-color)" stop-opacity="0.22" />
+                    <stop offset="100%" stop-color="var(--ods-color)" stop-opacity="0.01" />
+                  </linearGradient>
+                </defs>
+
+                <g v-for="tick in indicatorProgress.yTicks" :key="tick.value">
+                  <line
+                    :x1="indicatorProgress.left"
+                    :x2="indicatorProgress.width - indicatorProgress.right"
+                    :y1="tick.y"
+                    :y2="tick.y"
+                    class="vc-ods-action-grid-line"
+                  />
+                  <text
+                    :x="indicatorProgress.left - 18"
+                    :y="tick.y + 4"
+                    text-anchor="middle"
+                    class="vc-ods-action-axis-label"
+                  >
+                    {{ formatCompactValue(tick.value) }}
+                  </text>
+                </g>
+
+                <path :d="indicatorProgress.areaPath" fill="url(#indicatorProgressArea)" />
+                <polyline :points="indicatorProgress.polyline" class="vc-ods-action-line" />
+
+                <g v-for="point in indicatorProgress.points" :key="point.id">
+                  <line
+                    :x1="point.x"
+                    :x2="point.x"
+                    :y1="point.y"
+                    :y2="indicatorProgress.plotBottom"
+                    class="vc-ods-action-guide-line"
+                  />
+                  <circle :cx="point.x" :cy="point.y" r="10" class="vc-ods-action-point-halo" />
+                  <circle :cx="point.x" :cy="point.y" r="5" class="vc-ods-action-point">
+                    <title>{{ point.period }}: {{ point.displayValue }}</title>
+                  </circle>
+                  <text
+                    :x="point.x"
+                    :y="point.y - 17"
+                    text-anchor="middle"
+                    class="vc-ods-action-point-value"
+                  >
+                    {{ point.displayValue }}
+                  </text>
+                  <text
+                    :x="point.x"
+                    :y="indicatorProgress.plotBottom + 28"
+                    text-anchor="middle"
+                    class="vc-ods-action-axis-title"
+                  >
+                    {{ point.period }}
+                  </text>
+                </g>
+              </svg>
+            </div>
+          </article>
+
+          <aside class="vc-ods-action-summary">
+            <p class="text-xs font-black uppercase tracking-wide text-[#1d6d13]">Leitura atual</p>
+            <div class="vc-ods-action-current mt-4 flex items-end gap-2">
+              <strong>{{ latestIndicatorPoint?.displayValue }}</strong>
+            </div>
+            <p class="mt-2 text-sm font-bold text-slate-950">
+              {{ indicatorTrend.summary }}
+            </p>
+            <p class="mt-2 text-xs leading-5 text-slate-500">
+              Comparação entre o primeiro e o último valor publicado desta série.
+            </p>
+
+            <div class="my-5 h-px bg-slate-200" />
+
+            <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+              Ações que podem influenciar
+            </p>
+            <div v-if="linkedActionsForSelected.length" class="mt-3 space-y-2">
+              <div v-for="action in linkedActionsForSelected" :key="action.id" class="vc-ods-linked-action">
+                <q-icon name="conversion_path" size="16px" />
+                <span>
+                  <strong>{{ action.name }}</strong>
+                  <small>{{ expectedEffectLabel(action.effect) }}</small>
+                </span>
+              </div>
+            </div>
+            <p v-else class="mt-3 text-xs leading-5 text-slate-500">
+              Nenhuma ação foi relacionada diretamente a este indicador.
+            </p>
+
+            <div class="vc-ods-action-method mt-auto">
+              <q-icon name="info" size="17px" />
+              <span>Relação temporal não comprova causalidade; indica quais ações foram planejadas para influenciar o resultado.</span>
+            </div>
+          </aside>
+        </div>
+
+        <div v-else class="vc-ods-indicator-empty mt-6">
+          <q-icon name="timeline" size="32px" />
+          <div>
+            <p class="text-sm font-black text-slate-950">Série histórica ainda insuficiente</p>
+            <p class="mt-1 text-sm leading-6 text-slate-500">
+              Publique pelo menos dois lançamentos do mesmo indicador para calcular sua variação.
+            </p>
+          </div>
+        </div>
       </section>
 
       <section class="vc-ods-analytics mt-8">
@@ -179,7 +372,7 @@
         </div>
       </section>
 
-      <section class="mt-10 grid items-start space-y-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <section class="mt-10 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <article class="vc-ods-indicators-table">
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -231,9 +424,13 @@
     </main>
 
     <main v-else class="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <RouterLink to="/" class="vc-about-back">
-        <q-icon name="west" size="18px" />
-        Voltar para o início
+      <RouterLink
+        to="/"
+        class="vc-about-back vc-back-icon-only"
+        aria-label="Voltar para o início"
+        title="Voltar para o início"
+      >
+        <q-icon name="chevron_left" size="28px" />
       </RouterLink>
       <article class="mt-6 rounded-md border border-slate-200 bg-white p-6 shadow-sm">
         <p class="text-xl font-black text-slate-950">ODS não encontrado</p>
@@ -246,16 +443,137 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { getGoalImageUrl, getOdsDetail } from '@/data/ods';
-import type { OdsDetail } from '@/data/ods';
+import type { OdsAction, OdsDetail, OdsIndicator } from '@/data/ods';
 import { apiRequest } from '@/services/api';
+
+type OdsDetailPayload = Omit<OdsDetail, 'actions'> & {
+  actions: Array<OdsAction | string>;
+};
 
 const route = useRoute();
 const detail = ref<OdsDetail>();
+const actionsExpanded = ref(false);
+const selectedIndicatorId = ref<string>();
+const actionChartContainer = ref<HTMLElement>();
+const actionChartContainerWidth = ref(680);
+let actionChartResizeObserver: ResizeObserver | undefined;
+let actionChartResizeFrame: number | undefined;
 const normalizedScore = computed(() => Math.round(Math.max(0, Math.min(100, detail.value?.score ?? 0))));
 const scoreRingStyle = computed(() => ({ background: `conic-gradient(var(--ods-color) 0 ${normalizedScore.value}%, #e6ece6 ${normalizedScore.value}% 100%)` }));
+const visibleActions = computed(() => {
+  const actions = detail.value?.actions ?? [];
+  return actionsExpanded.value ? actions : actions.slice(-3);
+});
+const hiddenActionCount = computed(() => Math.max(0, (detail.value?.actions.length ?? 0) - 3));
+const chartableIndicators = computed(() =>
+  (detail.value?.indicators ?? []).filter((indicator) => indicator.observations.length > 1),
+);
+const indicatorChartOptions = computed(() =>
+  chartableIndicators.value.map((indicator) => ({ label: indicator.name, value: indicator.id })),
+);
+const selectedIndicator = computed(() =>
+  chartableIndicators.value.find((indicator) => indicator.id === selectedIndicatorId.value)
+  ?? chartableIndicators.value[0],
+);
+const indicatorProgress = computed(() => {
+  const observations = selectedIndicator.value?.observations ?? [];
+  const width = Math.max(300, actionChartContainerWidth.value, observations.length * 110);
+  const height = 280;
+  const left = 58;
+  const right = 28;
+  const top = 30;
+  const plotBottom = 210;
+  const plotHeight = plotBottom - top;
+  const plotWidth = width - left - right;
+  const values = observations.map((observation) => Number(observation.value));
+  const rawMinimum = Math.min(...values, 0);
+  const rawMaximum = Math.max(...values, 1);
+  const range = rawMaximum - rawMinimum || 1;
+  const padding = Math.max(range * 0.12, 0.5);
+  const minimum = rawMinimum >= 0 ? Math.max(0, rawMinimum - padding) : rawMinimum - padding;
+  const maximum = rawMaximum + padding;
+  const scaleRange = maximum - minimum || 1;
+  const yForValue = (value: number) => top + ((maximum - value) / scaleRange) * plotHeight;
+  const points = observations.map((observation, index) => {
+    const value = Number(observation.value);
+    return {
+      ...observation,
+      index,
+      value,
+      x: observations.length === 1 ? left + plotWidth / 2 : left + (index / (observations.length - 1)) * plotWidth,
+      y: yForValue(value),
+    };
+  });
+  const yTicks = Array.from({ length: 5 }, (_, index) => {
+    const value = maximum - (index / 4) * scaleRange;
+    return { value, y: yForValue(value) };
+  });
+  const polyline = points.map((point) => `${point.x},${point.y}`).join(' ');
+  const areaPath = points.length
+    ? `M ${points[0]?.x ?? left} ${plotBottom} L ${polyline.replaceAll(' ', ' L ')} L ${points.at(-1)?.x ?? width - right} ${plotBottom} Z`
+    : '';
+
+  return { width, height, left, right, plotBottom, points, yTicks, polyline, areaPath };
+});
+const latestIndicatorPoint = computed(() => indicatorProgress.value.points.at(-1));
+const indicatorTrend = computed(() => {
+  const indicator = selectedIndicator.value;
+  const points = indicatorProgress.value.points;
+  const firstValue = points[0]?.value ?? 0;
+  const latestValue = points.at(-1)?.value ?? 0;
+  const delta = latestValue - firstValue;
+  const relativeVariation = firstValue === 0 ? undefined : (delta / Math.abs(firstValue)) * 100;
+  const isStable = Math.abs(delta) < 0.0001;
+  const isProgress = indicator?.polarity === 'LOWER_IS_BETTER' ? delta < 0 : delta > 0;
+  const variationMagnitude = relativeVariation === undefined
+    ? `${formatCompactValue(Math.abs(delta))} ${indicator?.unit ?? ''}`.trim()
+    : `${Math.abs(relativeVariation).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+
+  if (indicator?.polarity === 'CONTEXTUAL') {
+    return {
+      label: 'Variação contextual',
+      summary: `${delta >= 0 ? 'Aumento' : 'Redução'} de ${variationMagnitude} no período`,
+      icon: 'swap_vert',
+      className: 'is-stable',
+    };
+  }
+
+  if (isStable) {
+    return {
+      label: 'Estável',
+      summary: 'Sem variação entre o primeiro e o último período',
+      icon: 'trending_flat',
+      className: 'is-stable',
+    };
+  }
+
+  if (isProgress) {
+    return {
+      label: 'Progresso',
+      summary: `${delta >= 0 ? 'Avanço' : 'Redução favorável'} de ${variationMagnitude}`,
+      icon: 'trending_up',
+      className: 'is-progress',
+    };
+  }
+
+  return {
+    label: 'Regressão',
+    summary: `${delta >= 0 ? 'Aumento desfavorável' : 'Queda'} de ${variationMagnitude}`,
+    icon: 'trending_down',
+    className: 'is-regression',
+  };
+});
+const linkedActionsForSelected = computed(() => {
+  const indicatorId = selectedIndicator.value?.id;
+  if (!indicatorId) return [];
+  return (detail.value?.actions ?? []).flatMap((action) => {
+    const link = action.indicatorLinks.find((item) => item.indicatorId === indicatorId);
+    return link ? [{ id: action.id, name: action.name, effect: link.expectedEffect }] : [];
+  });
+});
 const coverageMetrics = computed(() => {
   const current = detail.value;
   if (!current) return [];
@@ -276,14 +594,115 @@ const trendSummary = computed(() => {
 });
 const targetGridClass = computed(() => {
   const count = detail.value?.targets.length ?? 0;
-  if (count <= 1) return 'max-w-3xl';
+  if (count <= 1) return 'grid-cols-1';
   if (count === 2) return 'lg:grid-cols-2';
   return 'md:grid-cols-2 xl:grid-cols-3';
 });
 
+function formatCompactValue(value: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    notation: Math.abs(value) >= 10000 ? 'compact' : 'standard',
+    maximumFractionDigits: Math.abs(value) < 10 ? 1 : 0,
+  }).format(value);
+}
+
+function polarityLabel(polarity: OdsIndicator['polarity']) {
+  if (polarity === 'HIGHER_IS_BETTER') return 'Quanto maior, melhor';
+  if (polarity === 'LOWER_IS_BETTER') return 'Quanto menor, melhor';
+  return 'Indicador contextual';
+}
+
+function expectedEffectLabel(effect: OdsAction['indicatorLinks'][number]['expectedEffect']) {
+  if (effect === 'INCREASE') return 'Efeito esperado: aumentar';
+  if (effect === 'DECREASE') return 'Efeito esperado: reduzir';
+  return 'Efeito esperado: manter';
+}
+
+function actionInfluenceLabel(action: OdsAction) {
+  const firstLink = action.indicatorLinks[0];
+  if (!firstLink) return 'Indicador ainda não definido';
+  const remaining = action.indicatorLinks.length - 1;
+  return `Influencia: ${firstLink.name}${remaining > 0 ? ` e mais ${remaining}` : ''}`;
+}
+
+function normalizeOdsDetail(payload: OdsDetailPayload): OdsDetail {
+  return {
+    ...payload,
+    indicators: (payload.indicators ?? []).map((indicator, index) => ({
+      ...indicator,
+      id: indicator.id || `legacy-indicator-${payload.id}-${index}`,
+      unit: indicator.unit || '',
+      polarity: indicator.polarity || 'CONTEXTUAL',
+      observations: indicator.observations ?? [],
+    })),
+    actions: (payload.actions ?? []).map((action, index) => {
+      if (typeof action === 'string') {
+        return {
+          id: `legacy-${payload.id}-${index}`,
+          name: action,
+          description: '',
+          weight: 3,
+          createdAt: `2026-${String(index + 1).padStart(2, '0')}-01T12:00:00.000Z`,
+          indicatorLinks: [],
+        };
+      }
+
+      return {
+        ...action,
+        id: action.id || `action-${payload.id}-${index}`,
+        description: action.description || '',
+        weight: Math.max(1, Math.min(5, Number(action.weight) || 1)),
+        createdAt: action.createdAt || new Date().toISOString(),
+        indicatorLinks: action.indicatorLinks ?? [],
+      };
+    }),
+  };
+}
+
+watch(
+  actionChartContainer,
+  (element) => {
+    actionChartResizeObserver?.disconnect();
+    actionChartResizeObserver = undefined;
+
+    if (!element) return;
+
+    const updateWidth = () => {
+      if (actionChartResizeFrame) window.cancelAnimationFrame(actionChartResizeFrame);
+      actionChartResizeFrame = window.requestAnimationFrame(() => {
+        const nextWidth = Math.max(300, Math.floor(element.clientWidth));
+        if (Math.abs(nextWidth - actionChartContainerWidth.value) > 1) {
+          actionChartContainerWidth.value = nextWidth;
+        }
+      });
+    };
+
+    updateWidth();
+    actionChartResizeObserver = new ResizeObserver(updateWidth);
+    actionChartResizeObserver.observe(element);
+  },
+  { flush: 'post' },
+);
+
+onBeforeUnmount(() => {
+  actionChartResizeObserver?.disconnect();
+  if (actionChartResizeFrame) window.cancelAnimationFrame(actionChartResizeFrame);
+});
+
+watch(chartableIndicators, (indicators) => {
+  if (!indicators.some((indicator) => indicator.id === selectedIndicatorId.value)) {
+    selectedIndicatorId.value = indicators[0]?.id;
+  }
+}, { immediate: true });
+
 watch(() => route.params.id, async (id) => {
   const goalId = Number(id);
-  try { detail.value = await apiRequest<OdsDetail>(`/goals/${goalId}`); }
-  catch { detail.value = getOdsDetail(goalId); }
+  actionsExpanded.value = false;
+  try {
+    detail.value = normalizeOdsDetail(await apiRequest<OdsDetailPayload>(`/goals/${goalId}`));
+  } catch {
+    const fallback = getOdsDetail(goalId);
+    detail.value = fallback ? normalizeOdsDetail(fallback) : undefined;
+  }
 }, { immediate: true });
 </script>

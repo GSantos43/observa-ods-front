@@ -17,11 +17,41 @@ export interface OdsTarget {
 }
 
 export interface OdsIndicator {
+  id: string;
   name: string;
+  unit: string;
+  polarity: 'HIGHER_IS_BETTER' | 'LOWER_IS_BETTER' | 'CONTEXTUAL';
   value: string;
   period: string;
   source: string;
-  trend: 'Melhora' | 'Atenção' | 'Estável' | 'Planejado';
+  trend: 'Melhora' | 'Atenção' | 'Estável' | 'Planejado' | 'Piora';
+  observations: OdsObservation[];
+}
+
+export interface OdsObservation {
+  id: string;
+  period: string;
+  value: number;
+  displayValue: string;
+  source: string;
+  recordedAt: string;
+}
+
+export interface OdsActionIndicatorLink {
+  indicatorId: string;
+  name: string;
+  unit: string;
+  polarity: OdsIndicator['polarity'];
+  expectedEffect: 'INCREASE' | 'DECREASE' | 'MAINTAIN';
+}
+
+export interface OdsAction {
+  id: string;
+  name: string;
+  description: string;
+  weight: number;
+  createdAt: string;
+  indicatorLinks: OdsActionIndicatorLink[];
 }
 
 export interface OdsDetail extends Goal {
@@ -31,7 +61,7 @@ export interface OdsDetail extends Goal {
   municipalObjective: string;
   targets: OdsTarget[];
   indicators: OdsIndicator[];
-  actions: string[];
+  actions: OdsAction[];
 }
 
 const goalImageUrls = import.meta.glob('../assets/*.{jpg,png}', {
@@ -193,7 +223,7 @@ export const goals: Goal[] = [
 
 const detailSeeds: Record<
   number,
-  Pick<OdsDetail, 'status' | 'score' | 'situation' | 'municipalObjective' | 'actions'>
+  Pick<OdsDetail, 'status' | 'score' | 'situation' | 'municipalObjective'> & { actions: string[] }
 > = {
   1: {
     status: 'Atenção',
@@ -275,12 +305,66 @@ export function getOdsDetail(id: number): OdsDetail | undefined {
   }
 
   const seed = getSeed(goal);
+  const actionWeights =
+    seed.status === 'Alerta'
+      ? [3, 2, 3]
+      : seed.status === 'Atenção'
+        ? [2, 3, 3]
+        : [2, 3, 4];
   const owner =
     goal.id === 3 || goal.id === 4
       ? 'Educação e Saúde'
       : goal.id === 6 || goal.id === 11 || goal.id === 13 || goal.id === 15
         ? 'Infraestrutura e Meio Ambiente'
         : 'Desenvolvimento Social e Gestão';
+  const baseCoverage = Math.min(96, 46 + goal.id * 3);
+  const demoIndicators: OdsIndicator[] = [
+    {
+      id: `demo-indicator-${goal.id}-coverage`,
+      name: 'Cobertura territorial monitorada',
+      unit: '%',
+      polarity: 'HIGHER_IS_BETTER',
+      value: `${baseCoverage}%`,
+      period: '2026',
+      source: 'Base municipal demonstrativa',
+      trend: seed.status === 'Alerta' ? 'Atenção' : 'Melhora',
+      observations: [
+        { id: `demo-observation-${goal.id}-coverage-1`, period: '2024', value: Math.max(5, baseCoverage - 14), displayValue: `${Math.max(5, baseCoverage - 14)}%`, source: 'Base municipal demonstrativa', recordedAt: '2024-12-31T12:00:00.000Z' },
+        { id: `demo-observation-${goal.id}-coverage-2`, period: '2025', value: Math.max(8, baseCoverage - 7), displayValue: `${Math.max(8, baseCoverage - 7)}%`, source: 'Base municipal demonstrativa', recordedAt: '2025-12-31T12:00:00.000Z' },
+        { id: `demo-observation-${goal.id}-coverage-3`, period: '2026', value: baseCoverage, displayValue: `${baseCoverage}%`, source: 'Base municipal demonstrativa', recordedAt: '2026-12-31T12:00:00.000Z' },
+      ],
+    },
+    {
+      id: `demo-indicator-${goal.id}-actions`,
+      name: 'Ações municipais vinculadas',
+      unit: 'ações',
+      polarity: 'HIGHER_IS_BETTER',
+      value: String(2 + (goal.id % 5)),
+      period: '2026',
+      source: 'ObservaODS',
+      trend: 'Estável',
+      observations: [
+        { id: `demo-observation-${goal.id}-actions-1`, period: '2024', value: 1, displayValue: '1', source: 'ObservaODS', recordedAt: '2024-12-31T12:00:00.000Z' },
+        { id: `demo-observation-${goal.id}-actions-2`, period: '2025', value: 2, displayValue: '2', source: 'ObservaODS', recordedAt: '2025-12-31T12:00:00.000Z' },
+        { id: `demo-observation-${goal.id}-actions-3`, period: '2026', value: 2 + (goal.id % 5), displayValue: String(2 + (goal.id % 5)), source: 'ObservaODS', recordedAt: '2026-12-31T12:00:00.000Z' },
+      ],
+    },
+    {
+      id: `demo-indicator-${goal.id}-sources`,
+      name: 'Indicadores com fonte definida',
+      unit: 'indicadores',
+      polarity: 'HIGHER_IS_BETTER',
+      value: String(3 + (goal.id % 4)),
+      period: '2026',
+      source: 'Catálogo de fontes',
+      trend: goal.id === 18 ? 'Planejado' : 'Melhora',
+      observations: [
+        { id: `demo-observation-${goal.id}-sources-1`, period: '2024', value: 1, displayValue: '1', source: 'Catálogo de fontes', recordedAt: '2024-12-31T12:00:00.000Z' },
+        { id: `demo-observation-${goal.id}-sources-2`, period: '2025', value: 3, displayValue: '3', source: 'Catálogo de fontes', recordedAt: '2025-12-31T12:00:00.000Z' },
+        { id: `demo-observation-${goal.id}-sources-3`, period: '2026', value: 3 + (goal.id % 4), displayValue: String(3 + (goal.id % 4)), source: 'Catálogo de fontes', recordedAt: '2026-12-31T12:00:00.000Z' },
+      ],
+    },
+  ];
 
   return {
     ...goal,
@@ -313,29 +397,21 @@ export function getOdsDetail(id: number): OdsDetail | undefined {
         priority: 'Contínua',
       },
     ],
-    indicators: [
-      {
-        name: 'Cobertura territorial monitorada',
-        value: `${Math.min(96, 46 + goal.id * 3)}%`,
-        period: '2026',
-        source: 'Base municipal demonstrativa',
-        trend: seed.status === 'Alerta' ? 'Atenção' : 'Melhora',
-      },
-      {
-        name: 'Ações municipais vinculadas',
-        value: String(2 + (goal.id % 5)),
-        period: '2026',
-        source: 'ObservaODS',
-        trend: 'Estável',
-      },
-      {
-        name: 'Indicadores com fonte definida',
-        value: String(3 + (goal.id % 4)),
-        period: '2026',
-        source: 'Catálogo de fontes',
-        trend: goal.id === 18 ? 'Planejado' : 'Melhora',
-      },
-    ],
+    indicators: demoIndicators,
+    actions: seed.actions.map((name, index) => ({
+      id: `demo-${goal.id}-${index + 1}`,
+      name,
+      description: `Ação demonstrativa vinculada ao ODS ${goal.id}.`,
+      weight: actionWeights[index] ?? 3,
+      createdAt: `2026-${String(2 + index * 3).padStart(2, '0')}-01T12:00:00.000Z`,
+      indicatorLinks: [demoIndicators[index % demoIndicators.length]].flatMap((indicator) => indicator ? [{
+        indicatorId: indicator.id,
+        name: indicator.name,
+        unit: indicator.unit,
+        polarity: indicator.polarity,
+        expectedEffect: indicator.polarity === 'LOWER_IS_BETTER' ? 'DECREASE' as const : 'INCREASE' as const,
+      }] : []),
+    })),
   };
 }
 

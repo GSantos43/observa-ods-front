@@ -9,7 +9,7 @@
         Voltar para o início
       </RouterLink>
 
-      <section class="mt-6 grid space-y-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <section class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div>
           <p class="vc-ods-about-eyebrow">
             Objetivos do Desenvolvimento Sustentável
@@ -31,7 +31,7 @@
         </aside>
       </section>
 
-      <section class="mt-6 grid space-y-6 sm:grid-cols-2 lg:grid-cols-3">
+      <section class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <article
           v-for="item in priorities"
           :key="item.title"

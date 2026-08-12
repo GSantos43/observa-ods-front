@@ -1,23 +1,19 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <q-header class="vc-main-header border-b border-white/10 text-white shadow-sm">
-      <q-toolbar class="mx-auto h-14 max-w-6xl gap-3 px-4 sm:px-6">
-        <q-toolbar-title class="flex min-w-0 items-center gap-2.5 text-sm font-semibold">
-          <img
-            :src="brandImageUrl"
-            alt="ObservaODS"
-            class="h-9 w-9 shrink-0 object-contain drop-shadow-sm"
-          />
-          <span class="min-w-0">
-            <span class="block truncate text-sm font-semibold leading-none text-lime-100">
-              ObservaODS
-            </span>
-            <span
-              class="mt-1 block truncate text-[10px] font-medium uppercase tracking-wide text-white/55"
-            >
-              Observatório ODS
-            </span>
-          </span>
+      <q-toolbar class="mx-auto h-14 max-w-6xl gap-2 px-4 sm:gap-3 sm:px-6">
+        <q-toolbar-title class="flex min-w-0 items-center text-sm font-semibold">
+          <RouterLink
+            to="/"
+            aria-label="Ir para a página inicial"
+            class="vc-header-brand inline-flex shrink-0 items-center rounded-sm"
+          >
+            <img
+              :src="brandImageUrl"
+              alt="ObservaODS"
+              class="h-14 w-auto max-w-[132px] shrink-0 object-contain drop-shadow-sm sm:h-16 sm:max-w-[180px]"
+            />
+          </RouterLink>
         </q-toolbar-title>
 
         <nav class="hidden items-center gap-1 md:flex">
@@ -68,7 +64,7 @@
 
         <div
           v-if="auth.isAuthenticated && auth.user"
-          class="flex min-w-0 items-center gap-2 border-l border-white/15 pl-2 sm:pl-3"
+          class="vc-header-user flex min-w-0 items-center gap-2 border-l border-white/15 pl-2 sm:pl-3"
           :title="auth.user.name"
         >
           <q-avatar size="30px" class="hidden bg-lime-300 text-xs font-bold text-emerald-950 sm:flex">
@@ -210,7 +206,7 @@ import { useAuthStore } from '@/stores/auth-store';
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
-const brandImageUrl = new URL('../assets/prefs2.png', import.meta.url).href;
+const brandImageUrl = new URL('../assets/logo.png', import.meta.url).href;
 const userFirstName = computed(() => auth.user?.name.trim().split(/\s+/)[0] || 'Usuário');
 const userInitials = computed(() => {
   const name = auth.user?.name.trim();

@@ -58,7 +58,7 @@
         </article>
       </section>
 
-      <section class="mt-6 grid space-y-5 lg:grid-cols-[minmax(0,1fr)_420px]">
+      <section class="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
         <article id="metodologia" class="vc-about-method scroll-mt-24">
           <p class="text-xs font-black uppercase tracking-wide text-[#1d6d13]">Metodologia</p>
           <p role="heading" aria-level="2" class="vc-about-title text-slate-950">

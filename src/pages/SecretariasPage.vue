@@ -54,7 +54,7 @@
         </article>
       </section>
 
-      <section class="mt-7 grid space-y-7 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <section class="mt-7 grid gap-7 lg:grid-cols-[minmax(0,1fr)_380px]">
         <article class="vc-secretarias-flow">
           <p class="text-xs font-black uppercase tracking-wide text-[#1d6d13]">
             Fluxo de trabalho

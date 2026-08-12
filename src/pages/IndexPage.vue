@@ -335,7 +335,86 @@
         </div>
       </section>
 
-      <section id="secretarias" class="mt-10 grid space-y-4 md:grid-cols-3">
+      <section id="noticias" class="mt-12">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p class="text-xs font-black uppercase tracking-[0.16em] text-[#1d6d13]">
+              Atualidades do munic&iacute;pio
+            </p>
+            <p role="heading" aria-level="2" class="vc-content-title mt-2 text-[#687179]">
+              Not&iacute;cias relacionadas aos ODS
+            </p>
+            <p class="vc-section-lead mt-2 max-w-3xl text-slate-600">
+              Iniciativas e servi&ccedil;os p&uacute;blicos de Vit&oacute;ria da Conquista classificados conforme
+              sua contribui&ccedil;&atilde;o para o desenvolvimento municipal sustent&aacute;vel.
+            </p>
+          </div>
+          <a
+            href="https://www.pmvc.ba.gov.br/categoria/noticias/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-white px-4 py-2.5 text-sm font-bold text-[#1d6d13] shadow-sm hover:border-emerald-300 hover:bg-emerald-50"
+          >
+            Ver todas no portal <q-icon name="open_in_new" size="17px" />
+          </a>
+        </div>
+
+        <div v-if="newsLoading" class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div v-for="index in 6" :key="index" class="h-[330px] animate-pulse rounded-lg bg-slate-200" />
+        </div>
+
+        <div v-else-if="news.length" class="vc-news-grid mt-6">
+          <a
+            v-for="item in news"
+            :key="item.id"
+            :href="item.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="vc-news-card group"
+          >
+            <div class="vc-news-media">
+              <div class="absolute inset-0 grid place-items-center text-5xl text-white/20">
+                <q-icon name="account_balance" />
+              </div>
+              <img
+                v-if="item.imageUrl"
+                :src="item.imageUrl"
+                :alt="item.title"
+                class="vc-news-image"
+                @error="hideBrokenNewsImage"
+              />
+              <div class="vc-news-shade" />
+              <span class="vc-news-category">
+                {{ item.category }}
+              </span>
+            </div>
+            <div class="vc-news-content">
+              <div class="vc-news-meta">
+                <span><q-icon name="calendar_today" /> {{ item.publishedLabel || 'Publica&ccedil;&atilde;o recente' }}</span>
+                <span v-if="item.primaryGoalId" class="vc-news-primary">ODS {{ item.primaryGoalId }}</span>
+              </div>
+              <h3 class="vc-news-title">
+                {{ item.title }}
+              </h3>
+              <div class="vc-news-footer">
+                <div v-if="item.goalIds?.length" class="vc-news-goals">
+                  <span v-for="goalId in item.goalIds" :key="goalId">ODS {{ goalId }}</span>
+                </div>
+                <span class="vc-news-read">
+                  Ler notícia <q-icon name="arrow_forward" />
+                </span>
+              </div>
+            </div>
+          </a>
+        </div>
+
+        <div v-else class="mt-6 rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-500">
+          <q-icon name="newspaper" size="38px" class="text-emerald-700" />
+          <p class="mt-3 text-sm font-semibold">As not&iacute;cias municipais est&atilde;o sendo atualizadas.</p>
+        </div>
+      </section>
+
+      <section id="secretarias" class="mt-10 grid gap-4 md:grid-cols-3">
         <article
           v-for="metric in metrics"
           :key="metric.label"
@@ -365,6 +444,17 @@ interface Goal {
   localFocus: string;
   icon: string;
   color: string;
+}
+
+interface NewsItem {
+  id: string;
+  title: string;
+  url: string;
+  imageUrl?: string | null;
+  category: string;
+  publishedLabel?: string | null;
+  primaryGoalId?: number | null;
+  goalIds?: number[];
 }
 
 const heroImageUrl = new URL('../assets/vca.jpeg', import.meta.url).href;
@@ -607,6 +697,8 @@ const fallbackGoals: Goal[] = [
 ];
 
 const goals = ref<Goal[]>(fallbackGoals);
+const news = ref<NewsItem[]>([]);
+const newsLoading = ref(true);
 
 const selectedGoal = ref<Goal | null>(null);
 const isGoalLoading = ref(false);
@@ -645,6 +737,10 @@ function scrollToAboutOds() {
   aboutOdsSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function hideBrokenNewsImage(event: Event) {
+  (event.currentTarget as HTMLImageElement).style.display = 'none';
+}
+
 onBeforeUnmount(() => {
   if (goalLoadingTimer) {
     window.clearTimeout(goalLoadingTimer);
@@ -652,8 +748,13 @@ onBeforeUnmount(() => {
 });
 
 onMounted(async () => {
-  try { goals.value = await apiRequest<Goal[]>('/goals'); }
-  catch { goals.value = fallbackGoals; }
+  const [goalsResult, newsResult] = await Promise.allSettled([
+    apiRequest<Goal[]>('/goals'),
+    apiRequest<NewsItem[]>('/news?limit=6'),
+  ]);
+  goals.value = goalsResult.status === 'fulfilled' ? goalsResult.value : fallbackGoals;
+  news.value = newsResult.status === 'fulfilled' ? newsResult.value : [];
+  newsLoading.value = false;
 });
 
 const metrics = [
@@ -674,3 +775,158 @@ const metrics = [
   },
 ];
 </script>
+
+<style scoped>
+.vc-news-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.35rem;
+}
+
+.vc-news-card {
+  display: flex;
+  min-width: 0;
+  min-height: 390px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #dfe7e3;
+  border-radius: 14px;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 5px 18px rgb(15 48 35 / 7%);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.vc-news-card:hover {
+  transform: translateY(-5px);
+  border-color: #9dd5b3;
+  box-shadow: 0 16px 34px rgb(15 76 48 / 14%);
+}
+
+.vc-news-media {
+  position: relative;
+  height: 190px;
+  flex: 0 0 190px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #063d28, #0b6b42);
+}
+
+.vc-news-image {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 500ms ease;
+}
+
+.vc-news-card:hover .vc-news-image { transform: scale(1.045); }
+
+.vc-news-shade {
+  position: absolute;
+  z-index: 2;
+  inset: 45% 0 0;
+  background: linear-gradient(transparent, rgb(0 28 18 / 75%));
+  pointer-events: none;
+}
+
+.vc-news-category {
+  position: absolute;
+  z-index: 3;
+  bottom: 14px;
+  left: 14px;
+  max-width: calc(100% - 28px);
+  overflow: hidden;
+  padding: 6px 10px;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 6px;
+  background: rgb(19 112 59 / 92%);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.025em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  backdrop-filter: blur(5px);
+}
+
+.vc-news-content {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  padding: 1.2rem 1.25rem 1.1rem;
+}
+
+.vc-news-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #718096;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.vc-news-meta > span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.vc-news-primary { flex-shrink: 0; color: #19713f; font-weight: 800; }
+
+.vc-news-title {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0.85rem 0 0;
+  color: #13251d;
+  font-size: 1.08rem !important;
+  font-weight: 750 !important;
+  line-height: 1.38 !important;
+  letter-spacing: -0.012em;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  transition: color 180ms ease;
+}
+
+.vc-news-card:hover .vc-news-title { color: #176b3c; }
+
+.vc-news-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 1.15rem;
+}
+
+.vc-news-goals { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.vc-news-goals span {
+  border-radius: 999px;
+  background: #eaf7ef;
+  padding: 0.28rem 0.55rem;
+  color: #176b3c;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.vc-news-read {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.25rem;
+  color: #176b3c;
+  font-size: 0.73rem;
+  font-weight: 800;
+}
+
+@media (max-width: 1023px) {
+  .vc-news-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 639px) {
+  .vc-news-grid { grid-template-columns: 1fr; }
+  .vc-news-card { min-height: 370px; }
+  .vc-news-media { height: 180px; flex-basis: 180px; }
+}
+</style>
