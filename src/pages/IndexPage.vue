@@ -110,25 +110,49 @@
             <div
               v-if="isGoalLoading"
               key="loading"
-              class="vc-ods-guide-body vc-ods-guide-loading mt-5 border-t border-slate-100 pt-4"
+              class="vc-ods-guide-body vc-ods-guide-loading vc-selected-goal-panel mt-5 grid gap-4 border-t border-slate-100 pt-4 lg:grid-cols-[auto_minmax(0,1fr)_minmax(230px,280px)] lg:items-stretch"
+              aria-busy="true"
             >
               <div
-                class="vc-ods-guide-loading-card grid gap-4 rounded-md border border-slate-100 bg-slate-50 p-4 sm:grid-cols-[auto_1fr] sm:items-center"
+                class="vc-selected-goal-thumb vc-detail-skeleton grid h-24 w-24 shrink-0 place-items-center rounded-md sm:h-28 sm:w-28"
+                aria-hidden="true"
               >
-                <q-spinner color="green-9" size="38px" />
-                <div class="min-w-0">
-                  <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                    Carregando detalhe
-                  </p>
-                  <p class="mt-1 text-sm font-semibold leading-tight text-slate-950">
-                    Preparando leitura do ODS selecionado
-                  </p>
-                  <div class="mt-3 grid gap-2 sm:grid-cols-3">
-                    <div class="vc-detail-skeleton h-3 rounded" />
-                    <div class="vc-detail-skeleton h-3 rounded" />
-                    <div class="vc-detail-skeleton h-3 rounded" />
+                <q-spinner class="relative z-[1]" color="green-9" size="32px" />
+              </div>
+
+              <div class="min-w-0" role="status" aria-live="polite">
+                <div class="flex items-center gap-2">
+                  <div class="vc-detail-skeleton h-6 w-16 rounded-full" aria-hidden="true" />
+                  <p class="text-xs font-semibold text-slate-400">Carregando objetivo</p>
+                </div>
+                <div
+                  class="vc-detail-skeleton mt-3 h-7 w-full max-w-md rounded"
+                  aria-hidden="true"
+                />
+                <div class="mt-3 grid max-w-3xl gap-2" aria-hidden="true">
+                  <div class="vc-detail-skeleton h-3 w-full rounded" />
+                  <div class="vc-detail-skeleton h-3 w-4/5 rounded" />
+                </div>
+              </div>
+
+              <div
+                class="vc-selected-goal-aside rounded-md border border-slate-100 bg-slate-50 p-4"
+                aria-hidden="true"
+              >
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="vc-selected-goal-pin">
+                      <q-spinner color="green-9" size="14px" />
+                    </span>
+                    <div class="vc-detail-skeleton h-3 w-24 rounded" />
+                  </div>
+                  <div class="mt-3 grid gap-2">
+                    <div class="vc-detail-skeleton h-3 w-full rounded" />
+                    <div class="vc-detail-skeleton h-3 w-5/6 rounded" />
+                    <div class="vc-detail-skeleton h-3 w-2/3 rounded" />
                   </div>
                 </div>
+                <div class="vc-detail-skeleton mt-4 h-10 w-full rounded" />
               </div>
             </div>
 
@@ -192,12 +216,17 @@
             <div
               v-else
               key="guide"
-              class="vc-ods-guide-body mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4"
+              class="vc-ods-guide-body vc-ods-guide-body--idle mt-5 flex flex-wrap items-start gap-2 border-t border-slate-100 pt-4"
+              :class="{
+                'vc-ods-guide-body--expanded':
+                  isGoalPanelExpanding || hasExpandedGoalPanel,
+                'vc-ods-guide-body--fading': isGoalGuideFadingOut,
+              }"
             >
               <div
                 v-for="item in guideSteps"
                 :key="item.label"
-                class="vc-guide-chip flex min-w-[220px] flex-1 gap-3 rounded-md border border-slate-100 bg-slate-50 px-3 py-2.5"
+                class="vc-guide-chip flex min-w-[220px] flex-1 items-center gap-3 rounded-md border border-slate-100 bg-slate-50 px-3 py-2.5"
               >
                 <span class="vc-goal-guide-step-icon">
                   <q-icon :name="item.icon" size="16px" />
@@ -703,8 +732,12 @@ const newsLoading = ref(true);
 const selectedGoal = ref<Goal | null>(null);
 const isGoalLoading = ref(false);
 const loadingGoalId = ref<number | null>(null);
+const hasExpandedGoalPanel = ref(false);
+const isGoalPanelExpanding = ref(false);
+const isGoalGuideFadingOut = ref(false);
 const goalInfoCard = ref<HTMLElement | null>(null);
 const aboutOdsSection = ref<HTMLElement | null>(null);
+let goalExpansionTimer: number | undefined;
 let goalLoadingTimer: number | undefined;
 
 function getGoalImage(id: number) {
@@ -714,23 +747,56 @@ function getGoalImage(id: number) {
 }
 
 function selectGoal(goal: Goal) {
+  const shouldExpandPanel = !hasExpandedGoalPanel.value;
+
   selectedGoal.value = null;
-  isGoalLoading.value = true;
   loadingGoalId.value = goal.id;
 
-  window.requestAnimationFrame(() => {
-    goalInfoCard.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
+  if (goalExpansionTimer) {
+    window.clearTimeout(goalExpansionTimer);
+  }
 
   if (goalLoadingTimer) {
     window.clearTimeout(goalLoadingTimer);
   }
 
+  if (shouldExpandPanel) {
+    isGoalLoading.value = false;
+    isGoalPanelExpanding.value = true;
+    isGoalGuideFadingOut.value = false;
+
+    window.requestAnimationFrame(() => {
+      goalInfoCard.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    goalExpansionTimer = window.setTimeout(() => {
+      isGoalGuideFadingOut.value = true;
+
+      goalExpansionTimer = window.setTimeout(() => {
+        hasExpandedGoalPanel.value = true;
+        isGoalPanelExpanding.value = false;
+        isGoalLoading.value = true;
+
+        goalLoadingTimer = window.setTimeout(() => {
+          selectedGoal.value = goal;
+          isGoalLoading.value = false;
+          loadingGoalId.value = null;
+          isGoalGuideFadingOut.value = false;
+        }, 520);
+      }, 180);
+    }, 360);
+
+    return;
+  }
+
+  isGoalPanelExpanding.value = false;
+  isGoalGuideFadingOut.value = false;
+  isGoalLoading.value = true;
   goalLoadingTimer = window.setTimeout(() => {
     selectedGoal.value = goal;
     isGoalLoading.value = false;
     loadingGoalId.value = null;
-  }, 360);
+  }, 520);
 }
 
 function scrollToAboutOds() {
@@ -742,6 +808,10 @@ function hideBrokenNewsImage(event: Event) {
 }
 
 onBeforeUnmount(() => {
+  if (goalExpansionTimer) {
+    window.clearTimeout(goalExpansionTimer);
+  }
+
   if (goalLoadingTimer) {
     window.clearTimeout(goalLoadingTimer);
   }

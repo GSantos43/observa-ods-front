@@ -43,6 +43,7 @@ export interface OdsActionIndicatorLink {
   unit: string;
   polarity: OdsIndicator['polarity'];
   expectedEffect: 'INCREASE' | 'DECREASE' | 'MAINTAIN';
+  newValue?: number | null;
 }
 
 export interface OdsAction {

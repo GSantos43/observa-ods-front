@@ -96,7 +96,7 @@
                 </em>
                 <em v-else>Indicador ainda não definido</em>
               </span>
-              <small>{{ action.weight }}/5</small>
+              <small>{{ actionWeightLabel(action.weight) }}</small>
             </div>
             <p v-if="!detail.actions.length" class="text-sm leading-6 text-white/65">
               Nenhuma ação publicada para este objetivo.
@@ -254,7 +254,7 @@
                 <q-icon name="conversion_path" size="16px" />
                 <span>
                   <strong>{{ action.name }}</strong>
-                  <small>{{ expectedEffectLabel(action.effect) }}</small>
+                  <small>{{ expectedEffectLabel(action.effect) }}{{ action.newValue === null ? '' : ` · novo valor: ${formatActionValue(action.newValue, action.unit)}` }}</small>
                 </span>
               </div>
             </div>
@@ -571,7 +571,13 @@ const linkedActionsForSelected = computed(() => {
   if (!indicatorId) return [];
   return (detail.value?.actions ?? []).flatMap((action) => {
     const link = action.indicatorLinks.find((item) => item.indicatorId === indicatorId);
-    return link ? [{ id: action.id, name: action.name, effect: link.expectedEffect }] : [];
+    return link ? [{
+      id: action.id,
+      name: action.name,
+      effect: link.expectedEffect,
+      newValue: link.newValue ?? null,
+      unit: link.unit,
+    }] : [];
   });
 });
 const coverageMetrics = computed(() => {
@@ -616,6 +622,16 @@ function expectedEffectLabel(effect: OdsAction['indicatorLinks'][number]['expect
   if (effect === 'INCREASE') return 'Efeito esperado: aumentar';
   if (effect === 'DECREASE') return 'Efeito esperado: reduzir';
   return 'Efeito esperado: manter';
+}
+
+function actionWeightLabel(weight: number) {
+  const labels = ['Complementar', 'Apoio', 'Relevante', 'Estruturante', 'Prioritária'];
+  return labels[weight - 1] ?? `${weight}/5`;
+}
+
+function formatActionValue(value: number, unit: string) {
+  const formatted = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 4 }).format(value);
+  return unit ? `${formatted} ${unit}` : formatted;
 }
 
 function actionInfluenceLabel(action: OdsAction) {

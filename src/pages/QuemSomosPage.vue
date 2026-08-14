@@ -1,9 +1,13 @@
 <template>
   <q-page class="vc-about-page min-h-screen">
     <main class="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:py-10">
-      <RouterLink to="/" class="vc-about-back">
-        <q-icon name="west" size="18px" />
-        Voltar para o início
+      <RouterLink
+        to="/"
+        class="vc-about-back vc-back-icon-only"
+        aria-label="Voltar para o início"
+        title="Voltar para o início"
+      >
+        <q-icon name="chevron_left" size="28px" />
       </RouterLink>
 
       <section class="vc-about-hero mt-6">

@@ -3,10 +3,11 @@
     <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-10">
       <RouterLink
         to="/"
-        class="inline-flex items-center gap-2 text-sm font-semibold text-[#1d6d13] hover:text-[#15560f]"
+        class="vc-about-back vc-back-icon-only"
+        aria-label="Voltar para o início"
+        title="Voltar para o início"
       >
-        <q-icon name="west" size="18px" />
-        Voltar para o início
+        <q-icon name="chevron_left" size="28px" />
       </RouterLink>
 
       <section class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">

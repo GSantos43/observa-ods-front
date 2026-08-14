@@ -1,42 +1,70 @@
 <template>
-  <q-page class="min-h-screen bg-[#f4f5f3]">
-    <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-10">
-      <RouterLink
-        to="/"
-        class="inline-flex items-center gap-2 text-sm font-semibold text-[#1d6d13] hover:text-[#15560f]"
-      >
-        <q-icon name="west" size="18px" />
-        Voltar para o início
-      </RouterLink>
-
-      <section class="mt-6">
-        <p class="vc-ods-about-eyebrow">
-          Transparência e dados abertos
-        </p>
-        <p role="heading" aria-level="1" class="vc-page-title text-slate-950">
-          Fontes públicas para consulta, auditoria social e tomada de decisão
-        </p>
-        <p class="vc-page-lead text-slate-600">
-          A área de transparência centraliza referências de dados que podem alimentar o observatório
-          e apoiar análises sobre a evolução dos objetivos no município.
-        </p>
-      </section>
-
-      <section class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <article
-          v-for="item in sources"
-          :key="item.title"
-          class="rounded-md border border-slate-200 bg-white p-5 shadow-sm"
-        >
-          <span class="vc-card-icon">
-            <q-icon :name="item.icon" size="18px" />
+  <q-page class="vc-transparencia-page min-h-screen">
+    <main class="vc-transparencia-main mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-10">
+      <div class="vc-transparencia-surface">
+        <div class="vc-transparencia-topbar">
+          <RouterLink
+            to="/"
+            class="vc-about-back vc-back-icon-only"
+            aria-label="Voltar para o início"
+            title="Voltar para o início"
+          >
+            <q-icon name="chevron_left" size="28px" />
+          </RouterLink>
+          <span class="vc-transparencia-badge">
+            <q-icon name="verified" size="16px" />
+            Dados públicos
           </span>
-          <p role="heading" aria-level="2" class="vc-card-title text-slate-950">
-            {{ item.title }}
-          </p>
-          <p class="mt-2 text-sm leading-6 text-slate-600">{{ item.text }}</p>
-        </article>
-      </section>
+        </div>
+
+        <section class="vc-transparencia-intro">
+          <span class="vc-transparencia-intro-icon">
+            <q-icon name="policy" size="25px" />
+          </span>
+          <div class="min-w-0">
+            <p class="vc-ods-about-eyebrow">
+              Transparência e dados abertos
+            </p>
+            <p role="heading" aria-level="1" class="vc-page-title text-slate-950">
+              Fontes públicas para consulta, auditoria social e tomada de decisão
+            </p>
+            <p class="vc-page-lead text-slate-600">
+              A área de transparência centraliza referências de dados que podem alimentar o
+              observatório e apoiar análises sobre a evolução dos objetivos no município.
+            </p>
+          </div>
+        </section>
+
+        <section class="vc-transparencia-sources">
+          <div class="vc-transparencia-section-heading">
+            <div>
+              <p class="text-xs font-black uppercase tracking-wide text-[#1d6d13]">
+                Fontes de referência
+              </p>
+              <p class="mt-1 text-sm leading-6 text-slate-600">
+                Consulte as categorias utilizadas para documentar e acompanhar os indicadores.
+              </p>
+            </div>
+            <span>{{ sources.length }} categorias</span>
+          </div>
+
+          <div class="vc-transparencia-grid">
+            <article
+              v-for="item in sources"
+              :key="item.title"
+              class="vc-transparencia-card"
+            >
+              <span class="vc-card-icon">
+                <q-icon :name="item.icon" size="18px" />
+              </span>
+              <p role="heading" aria-level="2" class="vc-card-title text-slate-950">
+                {{ item.title }}
+              </p>
+              <p class="mt-2 text-sm leading-6 text-slate-600">{{ item.text }}</p>
+            </article>
+          </div>
+        </section>
+      </div>
     </main>
   </q-page>
 </template>

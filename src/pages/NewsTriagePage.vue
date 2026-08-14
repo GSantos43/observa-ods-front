@@ -57,7 +57,7 @@
               <div>
                 <p class="font-bold text-emerald-950">Esta notícia já originou uma ação</p>
                 <p class="mt-1 text-sm text-emerald-900">{{ news.action.name }}</p>
-                <p class="mt-2 text-xs text-emerald-800">ODS {{ news.action.goalId }} · {{ news.action.department.name }} · peso {{ news.action.weight }}</p>
+                <p class="mt-2 text-xs text-emerald-800">ODS {{ news.action.goalId }} · {{ news.action.department.name }} · {{ actionWeightLabel(news.action.weight) }}</p>
               </div>
             </div>
           </div>
@@ -100,26 +100,44 @@
                     <p class="text-sm font-bold text-slate-950">{{ indicator.name }}</p>
                     <p class="mt-1 text-xs text-slate-500">ODS {{ indicator.goalId }} · {{ polarityLabels[indicator.polarity] }}</p>
                   </div>
-                  <q-select
-                    v-model="form.indicatorEffects[indicator.id]"
-                    :options="expectedEffectOptions"
-                    emit-value
-                    map-options
-                    outlined
-                    dense
-                    label="Efeito esperado"
-                  />
+                  <div class="vc-action-influence-controls">
+                    <q-select
+                      :model-value="form.indicatorEffects[indicator.id]"
+                      :options="expectedEffectOptions"
+                      emit-value
+                      map-options
+                      outlined
+                      dense
+                      label="Efeito esperado"
+                      @update:model-value="setIndicatorEffect(indicator.id, $event)"
+                    />
+                    <q-input
+                      v-if="requiresNewIndicatorValue(form.indicatorEffects[indicator.id])"
+                      v-model="form.indicatorValues[indicator.id]"
+                      outlined
+                      dense
+                      inputmode="decimal"
+                      label="Novo valor do indicador"
+                      :suffix="indicator.unit || undefined"
+                      hint="Obrigatório ao publicar a ação."
+                      :rules="[optionalNumberRule]"
+                    />
+                  </div>
                 </div>
               </div>
               <div class="rounded-md border border-slate-200 bg-slate-50 p-4 md:col-span-2">
-                <div class="flex items-center justify-between gap-3">
-                  <div>
-                    <p class="text-sm font-bold text-slate-950">Peso da contribuição</p>
-                    <p class="mt-1 text-xs text-slate-500">1 representa contribuição complementar; 5, contribuição estruturante.</p>
-                  </div>
-                  <span class="vc-admin-status">{{ form.weight }} de 5</span>
-                </div>
-                <q-slider v-model="form.weight" :min="1" :max="5" :step="1" markers color="green-9" class="mt-2" />
+                <q-select
+                  v-model="form.weight"
+                  :options="actionWeightOptions"
+                  label="Relevância da contribuição"
+                  emit-value
+                  map-options
+                  outlined
+                  dense
+                  options-dense
+                  :hint="selectedActionWeight.description"
+                  persistent-hint
+                />
               </div>
               <q-input v-model="form.description" outlined type="textarea" autogrow label="Descrição e contribuição municipal" class="md:col-span-2" />
             </div>
@@ -157,7 +175,7 @@ import { useAuthStore } from '@/stores/auth-store';
 type TriageStatus = 'PENDING' | 'CONVERTED' | 'DISMISSED';
 interface Department { id: string; name: string }
 interface Goal { id: number; title: string }
-interface Indicator { id: string; name: string; goalId: number; polarity: 'HIGHER_IS_BETTER' | 'LOWER_IS_BETTER' | 'CONTEXTUAL' }
+interface Indicator { id: string; name: string; unit: string; goalId: number; polarity: 'HIGHER_IS_BETTER' | 'LOWER_IS_BETTER' | 'CONTEXTUAL' }
 interface TriageNews {
   id: string; title: string; url: string; imageUrl?: string | null; category: string;
   excerpt?: string | null; publishedAt?: string | null; publishedLabel?: string | null;
@@ -181,9 +199,26 @@ const expectedEffectOptions = [
   { label: 'Reduzir o valor', value: 'DECREASE' as const },
   { label: 'Manter o valor', value: 'MAINTAIN' as const },
 ];
+const actionWeightOptions = [
+  { label: '1 · Complementar', value: 1, description: 'Contribuição pequena ou indireta para o resultado.' },
+  { label: '2 · Apoio', value: 2, description: 'Ajuda o indicador, mas possui alcance limitado.' },
+  { label: '3 · Relevante', value: 3, description: 'Contribuição perceptível e com alcance municipal.' },
+  { label: '4 · Estruturante', value: 4, description: 'Ação importante, contínua ou de grande abrangência.' },
+  { label: '5 · Prioritária', value: 5, description: 'Uma das principais ações para produzir o resultado esperado.' },
+];
 const polarityLabels = { HIGHER_IS_BETTER: 'Quanto maior, melhor', LOWER_IS_BETTER: 'Quanto menor, melhor', CONTEXTUAL: 'Contextual' };
 const statusLabels: Record<TriageStatus, string> = { PENDING: 'Aguardando análise', CONVERTED: 'Convertida em ação', DISMISSED: 'Não aplicável' };
-const form = reactive({ name: '', description: '', departmentId: '', goalIds: [] as number[], weight: 3, indicatorIds: [] as string[], indicatorEffects: {} as Record<string, 'INCREASE' | 'DECREASE' | 'MAINTAIN'> });
+type ExpectedIndicatorEffect = 'INCREASE' | 'DECREASE' | 'MAINTAIN';
+const form = reactive({
+  name: '',
+  description: '',
+  departmentId: '',
+  goalIds: [] as number[],
+  weight: 3,
+  indicatorIds: [] as string[],
+  indicatorEffects: {} as Record<string, ExpectedIndicatorEffect>,
+  indicatorValues: {} as Record<string, string>,
+});
 const indicatorOptions = computed(() => indicators.value
   .filter((indicator) => form.goalIds.includes(indicator.goalId))
   .map((indicator) => ({ label: `ODS ${indicator.goalId} · ${indicator.name}`, value: indicator.id })));
@@ -191,6 +226,13 @@ const selectedIndicators = computed(() => form.indicatorIds.flatMap((id) => {
   const indicator = indicators.value.find((item) => item.id === id);
   return indicator ? [indicator] : [];
 }));
+const selectedActionWeight = computed(() =>
+  actionWeightOptions.find((option) => option.value === form.weight) ?? actionWeightOptions[2]!,
+);
+
+function actionWeightLabel(weight: number) {
+  return actionWeightOptions.find((option) => option.value === weight)?.label ?? `${weight} de 5`;
+}
 
 function formatDate(value?: string | null) {
   return value ? new Intl.DateTimeFormat('pt-BR').format(new Date(value)) : 'Data não informada';
@@ -205,6 +247,19 @@ function validateForm(requireIndicator = false) {
     $q.notify({ type: 'warning', message: 'Relacione ao menos um indicador antes de publicar a ação.' });
     return false;
   }
+  const invalidValueIndicator = selectedIndicators.value.find((indicator) => {
+    const effect = form.indicatorEffects[indicator.id] ?? defaultExpectedEffect(indicator.polarity);
+    if (!requiresNewIndicatorValue(effect)) return false;
+    const rawValue = form.indicatorValues[indicator.id]?.trim() ?? '';
+    return (requireIndicator && !rawValue) || (Boolean(rawValue) && !Number.isFinite(parseLocalizedNumber(rawValue)));
+  });
+  if (invalidValueIndicator) {
+    $q.notify({
+      type: 'warning',
+      message: `Informe um novo valor válido para o indicador “${invalidValueIndicator.name}”.`,
+    });
+    return false;
+  }
   return true;
 }
 
@@ -212,6 +267,42 @@ function defaultExpectedEffect(polarity?: Indicator['polarity']) {
   if (polarity === 'LOWER_IS_BETTER') return 'DECREASE' as const;
   if (polarity === 'CONTEXTUAL') return 'MAINTAIN' as const;
   return 'INCREASE' as const;
+}
+
+function requiresNewIndicatorValue(effect?: ExpectedIndicatorEffect) {
+  return effect === 'INCREASE' || effect === 'DECREASE';
+}
+
+function setIndicatorEffect(indicatorId: string, effect: ExpectedIndicatorEffect | null) {
+  if (!effect) return;
+  form.indicatorEffects[indicatorId] = effect;
+  if (!requiresNewIndicatorValue(effect)) delete form.indicatorValues[indicatorId];
+}
+
+function parseLocalizedNumber(value: string) {
+  const compactValue = value.trim().replace(/\s/g, '').replace(/[^\d,.\-+]/g, '');
+  if (!/\d/.test(compactValue)) return Number.NaN;
+  const lastComma = compactValue.lastIndexOf(',');
+  const lastDot = compactValue.lastIndexOf('.');
+  let normalized = compactValue;
+
+  if (lastComma >= 0 && lastDot >= 0) {
+    normalized = lastComma > lastDot
+      ? compactValue.replace(/\./g, '').replace(',', '.')
+      : compactValue.replace(/,/g, '');
+  } else if (lastComma >= 0) {
+    normalized = compactValue.replace(',', '.');
+  }
+
+  return Number(normalized);
+}
+
+function validNumberRule(value: unknown) {
+  return Number.isFinite(parseLocalizedNumber(String(value ?? ''))) || 'Informe um valor numérico válido.';
+}
+
+function optionalNumberRule(value: unknown) {
+  return !String(value ?? '').trim() || validNumberRule(value);
 }
 
 function isGoalOptionDisabled(option: { value: number }) {
@@ -232,10 +323,18 @@ async function convertNews(status: 'DRAFT' | 'PUBLISHED') {
         goalId: form.goalIds[0],
         weight: form.weight,
         status,
-        indicatorLinks: form.indicatorIds.map((indicatorId) => ({
-          indicatorId,
-          expectedEffect: form.indicatorEffects[indicatorId] ?? defaultExpectedEffect(indicators.value.find((item) => item.id === indicatorId)?.polarity),
-        })),
+        indicatorLinks: form.indicatorIds.map((indicatorId) => {
+          const effect = form.indicatorEffects[indicatorId]
+            ?? defaultExpectedEffect(indicators.value.find((item) => item.id === indicatorId)?.polarity);
+          const rawValue = form.indicatorValues[indicatorId]?.trim() ?? '';
+          return {
+            indicatorId,
+            expectedEffect: effect,
+            newValue: requiresNewIndicatorValue(effect) && rawValue
+              ? parseLocalizedNumber(rawValue)
+              : undefined,
+          };
+        }),
       }),
     });
     $q.notify({ type: 'positive', message: status === 'PUBLISHED' ? 'Ação publicada e computada com sucesso.' : 'Ação salva como rascunho.' });
@@ -290,6 +389,9 @@ watch(() => [...form.indicatorIds], (ids) => {
   const activeIds = new Set(ids);
   for (const id of Object.keys(form.indicatorEffects)) {
     if (!activeIds.has(id)) delete form.indicatorEffects[id];
+  }
+  for (const id of Object.keys(form.indicatorValues)) {
+    if (!activeIds.has(id)) delete form.indicatorValues[id];
   }
   for (const id of ids) {
     if (!form.indicatorEffects[id]) {

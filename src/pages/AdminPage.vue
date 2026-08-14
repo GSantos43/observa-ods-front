@@ -372,40 +372,52 @@
                 <button
                   type="button"
                   class="vc-triage-filter vc-triage-filter--pending"
-                  :class="triageFilter === 'PENDING' ? 'vc-triage-filter--active' : ''"
-                  :aria-pressed="triageFilter === 'PENDING'"
-                  @click="triageFilter = 'PENDING'"
+                  :class="isTriageFilterActive('PENDING') ? 'vc-triage-filter--active' : ''"
+                  :aria-pressed="isTriageFilterActive('PENDING')"
+                  @click="toggleTriageFilter('PENDING')"
                 >
                   <span><q-icon name="schedule" /> Aguardando análise</span>
                   <strong>{{ triageCounts.PENDING }}</strong>
                   <q-tooltip anchor="top middle" self="bottom middle" :offset="[0, 8]">
-                    Clique para exibir somente as notícias aguardando análise
+                    {{
+                      isTriageFilterActive('PENDING')
+                        ? 'Clique novamente para remover este filtro'
+                        : 'Clique para exibir somente as notícias aguardando análise'
+                    }}
                   </q-tooltip>
                 </button>
                 <button
                   type="button"
                   class="vc-triage-filter vc-triage-filter--converted"
-                  :class="triageFilter === 'CONVERTED' ? 'vc-triage-filter--active' : ''"
-                  :aria-pressed="triageFilter === 'CONVERTED'"
-                  @click="triageFilter = 'CONVERTED'"
+                  :class="isTriageFilterActive('CONVERTED') ? 'vc-triage-filter--active' : ''"
+                  :aria-pressed="isTriageFilterActive('CONVERTED')"
+                  @click="toggleTriageFilter('CONVERTED')"
                 >
                   <span><q-icon name="task_alt" /> Convertidas em ações</span>
                   <strong>{{ triageCounts.CONVERTED }}</strong>
                   <q-tooltip anchor="top middle" self="bottom middle" :offset="[0, 8]">
-                    Clique para filtrar as notícias já convertidas em ações
+                    {{
+                      isTriageFilterActive('CONVERTED')
+                        ? 'Clique novamente para remover este filtro'
+                        : 'Clique para filtrar as notícias já convertidas em ações'
+                    }}
                   </q-tooltip>
                 </button>
                 <button
                   type="button"
                   class="vc-triage-filter vc-triage-filter--dismissed"
-                  :class="triageFilter === 'DISMISSED' ? 'vc-triage-filter--active' : ''"
-                  :aria-pressed="triageFilter === 'DISMISSED'"
-                  @click="triageFilter = 'DISMISSED'"
+                  :class="isTriageFilterActive('DISMISSED') ? 'vc-triage-filter--active' : ''"
+                  :aria-pressed="isTriageFilterActive('DISMISSED')"
+                  @click="toggleTriageFilter('DISMISSED')"
                 >
                   <span><q-icon name="do_not_disturb_on" /> Não aplicáveis</span>
                   <strong>{{ triageCounts.DISMISSED }}</strong>
                   <q-tooltip anchor="top middle" self="bottom middle" :offset="[0, 8]">
-                    Clique para exibir as notícias classificadas como não aplicáveis
+                    {{
+                      isTriageFilterActive('DISMISSED')
+                        ? 'Clique novamente para remover este filtro'
+                        : 'Clique para exibir as notícias classificadas como não aplicáveis'
+                    }}
                   </q-tooltip>
                 </button>
               </div>
@@ -416,13 +428,13 @@
                   <p class="mt-1 text-xs text-slate-500">Clique em uma linha para abrir a análise completa.</p>
                 </div>
                 <q-btn
-                  v-if="triageFilter !== 'ALL'"
+                  v-if="triageFilters.length"
                   flat
                   color="green-9"
                   icon="view_list"
                   label="Exibir todas"
                   no-caps
-                  @click="triageFilter = 'ALL'"
+                  @click="clearTriageFilters"
                 />
               </div>
 
@@ -773,7 +785,7 @@
                       class="h-full w-full object-cover"
                     />
                   </div>
-                  <div class="min-w-0 flex-1">
+                  <div class="vc-managed-goal-heading min-w-0">
                     <p class="vc-managed-goal-badge">ODS {{ goal.id }}</p>
                     <p class="vc-managed-goal-title">
                       {{ goal.title }}
@@ -810,77 +822,436 @@
               icon="query_stats"
             />
 
-            <div class="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
+            <div class="grid items-start gap-5 xl:grid-cols-[400px_minmax(0,1fr)]">
               <article class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-                <p class="text-sm font-bold text-slate-950">Novo indicador</p>
-                <div class="mt-4 space-y-3">
+                <div class="flex items-start gap-3">
+                  <span class="vc-admin-section-icon"><q-icon name="add_chart" size="20px" /></span>
+                  <div>
+                    <p class="text-sm font-bold text-slate-950">Novo indicador</p>
+                    <p class="mt-1 text-xs leading-5 text-slate-500">
+                      Defina o que será medido e, se já houver um dado disponível, registre o primeiro valor.
+                    </p>
+                  </div>
+                </div>
+                <q-form class="mt-5 space-y-3" @submit="saveIndicator">
                   <q-select
                     v-model="indicatorForm.goal"
                     :options="goalOptions"
-                    label="ODS vinculado"
+                    label="ODS vinculado *"
                     outlined
                     dense
+                    :rules="[requiredRule]"
                   />
-                  <q-input v-model="indicatorForm.name" label="Nome do indicador" outlined dense />
-                  <q-input v-model="indicatorForm.unit" label="Unidade de medida" outlined dense />
+                  <q-input v-model.trim="indicatorForm.name" label="Nome do indicador *" outlined dense :rules="[requiredRule]" />
+                  <q-input v-model.trim="indicatorForm.unit" label="Unidade de medida *" hint="Exemplo: %, pessoas, km²" outlined dense :rules="[requiredRule]" />
                   <div class="grid gap-3 sm:grid-cols-2">
                     <q-select
                       v-model="indicatorForm.frequency"
                       :options="frequencyOptions"
-                      label="Periodicidade"
+                      label="Periodicidade *"
                       outlined
                       dense
+                      :rules="[requiredRule]"
                     />
                     <q-select
                       v-model="indicatorForm.polarity"
                       :options="polarityOptions"
-                      label="Polaridade"
+                      label="Polaridade *"
                       outlined
                       dense
+                      :rules="[requiredRule]"
                     />
                   </div>
                   <q-input
-                    v-model="indicatorForm.description"
-                    label="Descri&ccedil;&atilde;o metodol&oacute;gica"
+                    v-model.trim="indicatorForm.description"
+                    label="Descrição metodológica *"
                     outlined
                     dense
                     type="textarea"
+                    rows="3"
+                    :rules="[requiredRule]"
                   />
+
+                  <section class="vc-indicator-initial-value">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <p class="text-xs font-bold text-slate-800">Registrar valor inicial</p>
+                        <p class="mt-1 text-[11px] leading-4 text-slate-500">
+                          Opcional. Cria o primeiro ponto da série histórica junto com o indicador.
+                        </p>
+                      </div>
+                      <q-toggle
+                        v-model="indicatorForm.includeInitialValue"
+                        color="green-9"
+                        :disable="!apiSources.length"
+                        aria-label="Registrar valor inicial"
+                      />
+                    </div>
+
+                    <div v-if="indicatorForm.includeInitialValue" class="mt-4 grid gap-x-3 gap-y-1 sm:grid-cols-2">
+                      <q-input
+                        v-model.trim="indicatorForm.initialValue"
+                        label="Valor inicial *"
+                        inputmode="decimal"
+                        outlined
+                        dense
+                        :rules="[requiredRule, validNumberRule]"
+                      />
+                      <q-input
+                        v-model.trim="indicatorForm.initialPeriod"
+                        label="Período *"
+                        hint="Exemplo: 2026 ou 2026.1"
+                        outlined
+                        dense
+                        :rules="[requiredRule]"
+                      />
+                      <q-select
+                        v-model="indicatorForm.initialSourceId"
+                        class="sm:col-span-2"
+                        :options="sourceSelectOptions"
+                        option-label="label"
+                        option-value="value"
+                        emit-value
+                        map-options
+                        label="Fonte do valor *"
+                        outlined
+                        dense
+                        :rules="[requiredRule]"
+                      />
+                      <q-input
+                        v-model.trim="indicatorForm.initialTerritory"
+                        label="Território *"
+                        outlined
+                        dense
+                        :rules="[requiredRule]"
+                      />
+                      <q-select
+                        v-model="indicatorForm.initialStatus"
+                        :options="observationStatusOptions"
+                        option-label="label"
+                        option-value="value"
+                        emit-value
+                        map-options
+                        label="Situação do valor *"
+                        outlined
+                        dense
+                      />
+                    </div>
+
+                    <div v-else-if="!apiSources.length" class="mt-3 flex items-center justify-between gap-3 rounded-md bg-amber-50 px-3 py-2">
+                      <p class="text-[11px] leading-4 text-amber-800">Cadastre uma fonte antes de incluir valores.</p>
+                      <q-btn flat dense color="amber-10" label="Cadastrar fonte" no-caps @click="activeSection = 'fontes'" />
+                    </div>
+                  </section>
+
                   <q-btn
                     class="w-full"
                     color="green-9"
                     icon="save"
-                    label="Salvar indicador"
+                    :label="indicatorForm.includeInitialValue ? 'Salvar indicador e valor' : 'Salvar indicador'"
                     no-caps
+                    unelevated
+                    type="submit"
                     :loading="adminSaving"
-                    @click="saveIndicator"
                   />
-                </div>
+                </q-form>
               </article>
 
-              <article class="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-                <p class="text-sm font-bold text-slate-950">Indicadores cadastrados</p>
-                <div class="mt-4 space-y-3">
-                  <div
-                    v-for="indicator in indicators"
-                    :key="indicator.name"
-                    class="rounded-md border border-slate-100 bg-slate-50 p-4"
-                  >
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p class="text-sm font-bold text-slate-950">{{ indicator.name }}</p>
-                        <p class="mt-1 text-xs leading-5 text-slate-500">
-                          {{ indicator.goal }} &middot; {{ indicator.target }} &middot;
-                          {{ indicator.frequency }}
-                        </p>
-                      </div>
-                      <span class="vc-admin-status">{{ indicator.status }}</span>
-                    </div>
-                    <p class="mt-3 text-xs leading-5 text-slate-600">{{ indicator.description }}</p>
+              <article class="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
+                <div class="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 p-5">
+                  <div>
+                    <p class="text-sm font-bold text-slate-950">Indicadores cadastrados</p>
+                    <p class="mt-1 text-xs leading-5 text-slate-500">
+                      Localize por nome ou ODS. Clique em uma linha para consultar, editar ou publicar valores.
+                    </p>
                   </div>
+                  <span class="vc-admin-status">
+                    {{ filteredIndicators.length === indicators.length ? indicators.length : `${filteredIndicators.length} de ${indicators.length}` }}
+                    cadastrados
+                  </span>
                 </div>
+
+                <div class="vc-indicator-directory-toolbar">
+                  <q-input
+                    v-model="indicatorSearch"
+                    class="vc-indicator-directory-search"
+                    outlined
+                    dense
+                    clearable
+                    debounce="150"
+                    label="Buscar indicador"
+                    placeholder="Nome, meta, unidade ou descrição"
+                  >
+                    <template #prepend><q-icon name="search" size="19px" /></template>
+                  </q-input>
+                  <q-select
+                    v-model="indicatorGoalFilter"
+                    class="vc-indicator-directory-filter"
+                    :options="indicatorGoalFilterOptions"
+                    emit-value
+                    map-options
+                    outlined
+                    dense
+                    clearable
+                    label="Filtrar por ODS"
+                  >
+                    <template #prepend><q-icon name="filter_alt" size="18px" /></template>
+                  </q-select>
+                  <q-btn
+                    v-if="indicatorSearch || indicatorGoalFilter"
+                    flat
+                    dense
+                    color="green-9"
+                    icon="filter_alt_off"
+                    label="Limpar"
+                    no-caps
+                    @click="clearIndicatorFilters"
+                  />
+                </div>
+
+                <div class="overflow-x-auto">
+                  <table class="vc-admin-table vc-indicator-directory-table">
+                    <thead>
+                      <tr>
+                        <th>Indicador</th>
+                        <th>Vinculação</th>
+                        <th>Monitoramento</th>
+                        <th>Último valor</th>
+                        <th>Situação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="indicator in paginatedIndicators"
+                        :key="indicator.id"
+                        class="vc-indicator-directory-row"
+                        role="button"
+                        tabindex="0"
+                        :aria-label="`Abrir informações e lançamentos de ${indicator.name}`"
+                        @click="openIndicatorValue(indicator.id)"
+                        @keydown.enter.prevent="openIndicatorValue(indicator.id)"
+                        @keydown.space.prevent="openIndicatorValue(indicator.id)"
+                      >
+                        <td>
+                          <div class="vc-indicator-directory-name">
+                            <strong>{{ indicator.name }}</strong>
+                            <span>{{ indicator.description }}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span class="vc-admin-code">{{ indicator.goal }}</span>
+                          <p class="vc-indicator-directory-secondary">{{ indicator.target }}</p>
+                        </td>
+                        <td>
+                          <strong class="vc-indicator-directory-primary">{{ indicator.frequency }}</strong>
+                          <p class="vc-indicator-directory-secondary">
+                            {{ indicator.unit }} · {{ indicator.polarity }}
+                          </p>
+                        </td>
+                        <td>
+                          <strong class="vc-indicator-directory-value">{{ indicator.lastValue }}</strong>
+                          <p class="vc-indicator-directory-secondary">
+                            {{ indicator.lastPeriod ? `Período ${indicator.lastPeriod}` : 'Série não iniciada' }}
+                          </p>
+                        </td>
+                        <td>
+                          <span class="vc-admin-status">{{ indicator.status }}</span>
+                          <p class="vc-indicator-directory-secondary">
+                            {{ indicator.observationCount }}
+                            {{ countLabel(indicator.observationCount, 'lançamento', 'lançamentos') }}
+                          </p>
+                        </td>
+                      </tr>
+                      <tr v-if="!filteredIndicators.length">
+                        <td colspan="5" class="vc-indicator-directory-empty">
+                          <q-icon name="search_off" size="28px" />
+                          <strong>{{ indicators.length ? 'Nenhum indicador corresponde aos filtros' : 'Nenhum indicador cadastrado' }}</strong>
+                          <span>
+                            {{ indicators.length ? 'Ajuste a busca ou remova o filtro de ODS.' : 'Use o formulário ao lado para criar o primeiro indicador.' }}
+                          </span>
+                          <q-btn
+                            v-if="indicators.length"
+                            flat
+                            dense
+                            color="green-9"
+                            label="Limpar filtros"
+                            no-caps
+                            @click="clearIndicatorFilters"
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <footer v-if="filteredIndicators.length" class="vc-indicator-directory-pagination">
+                  <p>
+                    Exibindo {{ indicatorPageStart }}–{{ indicatorPageEnd }} de
+                    {{ filteredIndicators.length }} indicadores
+                  </p>
+                  <q-pagination
+                    v-if="indicatorTotalPages > 1"
+                    v-model="indicatorPage"
+                    :max="indicatorTotalPages"
+                    :max-pages="5"
+                    boundary-numbers
+                    direction-links
+                    color="green-9"
+                    active-color="green-9"
+                    size="sm"
+                    aria-label="Paginação dos indicadores"
+                  />
+                </footer>
               </article>
             </div>
+
+            <q-dialog v-model="indicatorValueDialogOpen" persistent>
+              <q-card class="vc-target-dialog vc-indicator-value-dialog">
+                <q-card-section class="vc-target-dialog-header">
+                  <div class="min-w-0">
+                    <p class="text-[11px] font-bold uppercase tracking-[0.06em] text-green-9">
+                      Série histórica · ODS {{ selectedValueIndicator?.goalId }}
+                    </p>
+                    <p class="mt-1.5 text-xl font-bold leading-tight text-slate-950">
+                      {{ editingObservationId ? 'Editar último lançamento' : 'Registrar valor do indicador' }}
+                    </p>
+                    <p class="mt-2 max-w-xl text-sm leading-5 text-slate-500">
+                      {{ selectedValueIndicator?.name }}
+                    </p>
+                  </div>
+                  <q-btn class="vc-target-dialog-close" flat round dense icon="close" aria-label="Fechar formulário" @click="closeIndicatorValueDialog" />
+                </q-card-section>
+
+                <div v-if="selectedValueIndicator" class="vc-indicator-dialog-summary">
+                  <div class="vc-indicator-unit-editor">
+                    <span>Unidade de medida</span>
+                    <q-input
+                      v-model.trim="indicatorValueForm.unit"
+                      class="vc-indicator-unit-input"
+                      aria-label="Unidade de medida do indicador"
+                      placeholder="Exemplo: %, pessoas, km²"
+                      outlined
+                      dense
+                      hide-bottom-space
+                      :disable="adminSaving"
+                    />
+                  </div>
+                  <div>
+                    <span>Periodicidade</span>
+                    <strong>{{ frequencyFromApi[selectedValueIndicator.frequency] ?? selectedValueIndicator.frequency }}</strong>
+                  </div>
+                  <div>
+                    <span>Regra de leitura</span>
+                    <strong>{{ polarityFromApi[selectedValueIndicator.polarity] ?? selectedValueIndicator.polarity }}</strong>
+                  </div>
+                  <div>
+                    <span>Data de criação</span>
+                    <strong>{{ formatIndicatorCreationDate(selectedValueIndicator.createdAt) }}</strong>
+                  </div>
+                </div>
+
+                <q-separator />
+
+                <q-form class="vc-target-dialog-form" @submit="saveIndicatorValue">
+                  <q-card-section class="vc-target-dialog-body">
+                    <div class="vc-target-form-section-heading">
+                      <p>Valor observado</p>
+                      <span>* Campos obrigatórios</span>
+                    </div>
+                    <div class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                      <q-input
+                        v-model.trim="indicatorValueForm.period"
+                        label="Período *"
+                        hint="Exemplo: 2026, 2026.1 ou Ago/2026"
+                        outlined
+                        dense
+                        autofocus
+                        :rules="[requiredRule]"
+                      />
+                      <q-input
+                        v-model.trim="indicatorValueForm.value"
+                        :label="`Valor (${selectedValueIndicator?.unit ?? 'unidade'}) *`"
+                        inputmode="decimal"
+                        outlined
+                        dense
+                        :rules="[requiredRule, validNumberRule]"
+                      />
+                      <q-select
+                        v-model="indicatorValueForm.sourceId"
+                        :options="sourceSelectOptions"
+                        option-label="label"
+                        option-value="value"
+                        emit-value
+                        map-options
+                        label="Fonte *"
+                        outlined
+                        dense
+                        :rules="[requiredRule]"
+                      />
+                      <q-input
+                        v-model.trim="indicatorValueForm.territory"
+                        label="Território *"
+                        outlined
+                        dense
+                        :rules="[requiredRule]"
+                      />
+                      <q-select
+                        v-model="indicatorValueForm.status"
+                        class="sm:col-span-2"
+                        :options="observationStatusOptions"
+                        option-label="label"
+                        option-value="value"
+                        emit-value
+                        map-options
+                        label="Situação do lançamento *"
+                        outlined
+                        dense
+                      />
+                      <q-input
+                        v-model.trim="indicatorValueForm.note"
+                        class="sm:col-span-2"
+                        label="Observação técnica"
+                        type="textarea"
+                        rows="3"
+                        maxlength="500"
+                        outlined
+                        dense
+                      />
+                    </div>
+
+                    <div class="mt-2 flex items-start gap-2 rounded-md bg-slate-50 px-3 py-2.5 text-[11px] leading-4 text-slate-600">
+                      <q-icon name="history" size="17px" color="green-9" />
+                      <p>Os valores são guardados por período, fonte e território. Assim, o gráfico mostra a evolução sem apagar o histórico.</p>
+                    </div>
+                  </q-card-section>
+
+                  <q-separator />
+
+                  <q-card-actions class="vc-target-dialog-actions vc-indicator-dialog-actions">
+                    <q-btn
+                      v-if="editingObservationId"
+                      flat
+                      color="green-9"
+                      icon="add"
+                      label="Novo período"
+                      no-caps
+                      @click="startNewIndicatorPeriod"
+                    />
+                    <span class="flex-1" />
+                    <q-btn flat color="grey-8" label="Cancelar" no-caps @click="closeIndicatorValueDialog" />
+                    <q-btn
+                      color="green-9"
+                      icon="check"
+                      :label="editingObservationId ? 'Salvar alteração' : 'Registrar valor'"
+                      no-caps
+                      unelevated
+                      type="submit"
+                      :loading="adminSaving"
+                    />
+                  </q-card-actions>
+                </q-form>
+              </q-card>
+            </q-dialog>
           </section>
 
           <section v-else-if="activeSection === 'metas'" key="metas" class="space-y-5">
@@ -1214,14 +1585,17 @@
                     outlined
                     dense
                   />
-                  <q-input
-                    v-model.number="actionForm.weight"
-                    label="Peso"
+                  <q-select
+                    v-model="actionForm.weight"
+                    :options="actionWeightOptions"
+                    label="Relevância da contribuição"
+                    emit-value
+                    map-options
                     outlined
                     dense
-                    type="number"
-                    min="1"
-                    max="5"
+                    options-dense
+                    :hint="selectedActionWeight.description"
+                    persistent-hint
                   />
                   <q-select
                     v-model="actionForm.indicatorIds"
@@ -1243,7 +1617,7 @@
                   <div class="mb-3">
                     <p class="text-sm font-bold text-slate-950">Efeito esperado sobre cada indicador</p>
                     <p class="mt-1 text-xs leading-5 text-slate-500">
-                      Informe a direção que a ação pretende produzir. O resultado real será calculado pelos valores lançados.
+                      Informe a direção e o novo valor associado à ação. A série histórica oficial continua sendo consolidada pelos lançamentos do indicador.
                     </p>
                   </div>
                   <div
@@ -1255,34 +1629,30 @@
                       <p class="text-sm font-bold text-slate-950">{{ indicator.name }}</p>
                       <p class="mt-1 text-xs text-slate-500">{{ polarityFromApi[indicator.polarity] ?? indicator.polarity }}</p>
                     </div>
-                    <q-select
-                      v-model="actionForm.indicatorEffects[indicator.id]"
-                      :options="expectedEffectOptions"
-                      emit-value
-                      map-options
-                      outlined
-                      dense
-                      label="Efeito esperado"
-                    />
+                    <div class="vc-action-influence-controls">
+                      <q-select
+                        :model-value="actionForm.indicatorEffects[indicator.id]"
+                        :options="expectedEffectOptions"
+                        emit-value
+                        map-options
+                        outlined
+                        dense
+                        label="Efeito esperado"
+                        @update:model-value="setActionIndicatorEffect(indicator.id, $event)"
+                      />
+                      <q-input
+                        v-if="requiresNewIndicatorValue(actionForm.indicatorEffects[indicator.id])"
+                        v-model="actionForm.indicatorValues[indicator.id]"
+                        outlined
+                        dense
+                        inputmode="decimal"
+                        label="Novo valor do indicador"
+                        :suffix="indicator.unit || undefined"
+                        hint="Obrigatório ao publicar a ação."
+                        :rules="[optionalNumberRule]"
+                      />
+                    </div>
                   </div>
-                </div>
-
-                <div class="mt-4 rounded-md border border-slate-100 bg-slate-50 p-4">
-                  <div class="flex items-center justify-between gap-3 text-xs">
-                    <span class="font-bold uppercase tracking-wide text-slate-500">
-                      Peso da a&ccedil;&atilde;o
-                    </span>
-                    <span class="vc-admin-status">{{ actionForm.weight }} de 5</span>
-                  </div>
-                  <q-slider
-                    v-model="actionForm.weight"
-                    class="mt-2"
-                    color="green-9"
-                    :min="1"
-                    :max="5"
-                    :step="1"
-                    markers
-                  />
                 </div>
 
                 <q-input
@@ -1326,7 +1696,7 @@
                         {{ actionForm.name }}
                       </p>
                       <p class="mt-2 text-xs leading-5 text-slate-500">
-                        {{ actionForm.department }} &middot; peso {{ actionForm.weight }}
+                        {{ actionForm.department }} &middot; {{ selectedActionWeight.label }}
                       </p>
                       <p v-if="selectedActionIndicators.length" class="mt-2 text-xs font-semibold leading-5 text-emerald-800">
                         {{ selectedActionIndicators.length }} {{ selectedActionIndicators.length === 1 ? 'indicador relacionado' : 'indicadores relacionados' }}
@@ -1353,7 +1723,7 @@
                             {{ action.department }} &middot; {{ action.goal }}
                           </p>
                         </div>
-                        <span class="vc-admin-status">Peso {{ action.weight }}</span>
+                        <span class="vc-admin-status">{{ actionWeightLabel(action.weight) }}</span>
                       </div>
                       <p class="mt-3 text-xs leading-5 text-slate-600">
                         {{ action.description }}
@@ -1943,35 +2313,123 @@ const managedGoals = ref([
   },
 ]);
 
-const indicators = ref([
+interface ManagedIndicator {
+  id: string;
+  name: string;
+  goal: string;
+  target: string;
+  frequency: string;
+  status: string;
+  description: string;
+  unit: string;
+  polarity: string;
+  lastValue: string;
+  lastPeriod: string | null;
+  observationCount: number;
+}
+
+const indicators = ref<ManagedIndicator[]>([
   {
+    id: 'demonstrative-indicator-1',
     name: 'Fam\u00edlias em situa\u00e7\u00e3o de vulnerabilidade acompanhadas',
     goal: 'ODS 1',
     target: 'Meta local 1.2',
     frequency: 'Mensal',
     status: 'Em revis\u00e3o',
+    unit: '%',
+    polarity: 'Quanto maior, melhor',
+    lastValue: 'Sem valores',
+    lastPeriod: null,
+    observationCount: 0,
     description:
       'Percentual de fam\u00edlias cadastradas e acompanhadas pela rede socioassistencial.',
   },
   {
+    id: 'demonstrative-indicator-2',
     name: 'Cobertura da aten\u00e7\u00e3o b\u00e1sica',
     goal: 'ODS 3',
     target: 'Meta local 3.8',
     frequency: 'Quadrimestral',
     status: 'Publicado',
+    unit: '%',
+    polarity: 'Quanto maior, melhor',
+    lastValue: '78,4%',
+    lastPeriod: '2026.1',
+    observationCount: 1,
     description:
       'Cobertura estimada das equipes de sa\u00fade da fam\u00edlia por territ\u00f3rio.',
   },
   {
+    id: 'demonstrative-indicator-3',
     name: 'Taxa de perman\u00eancia escolar',
     goal: 'ODS 4',
     target: 'Meta local 4.1',
     frequency: 'Anual',
     status: 'Rascunho',
+    unit: '%',
+    polarity: 'Quanto maior, melhor',
+    lastValue: '91,2%',
+    lastPeriod: '2025',
+    observationCount: 1,
     description:
       'Indicador de perman\u00eancia de estudantes na rede municipal ao longo do ano letivo.',
   },
 ]);
+
+const indicatorSearch = ref<string | null>('');
+const indicatorGoalFilter = ref<string | null>(null);
+const indicatorGoalFilterOptions = computed(() =>
+  [...new Set(indicators.value.map((indicator) => indicator.goal))]
+    .sort((current, next) => current.localeCompare(next, 'pt-BR', { numeric: true }))
+    .map((goal) => ({ label: goal, value: goal })),
+);
+const filteredIndicators = computed(() => {
+  const query = normalizeSearch(indicatorSearch.value);
+
+  return indicators.value
+    .filter((indicator) => {
+      if (indicatorGoalFilter.value && indicator.goal !== indicatorGoalFilter.value) return false;
+      if (!query) return true;
+
+      return normalizeSearch(
+        `${indicator.name} ${indicator.goal} ${indicator.target} ${indicator.frequency} ${indicator.status} ${indicator.description} ${indicator.unit} ${indicator.polarity} ${indicator.lastValue} ${indicator.lastPeriod ?? ''}`,
+      ).includes(query);
+    })
+    .sort(
+      (current, next) =>
+        current.goal.localeCompare(next.goal, 'pt-BR', { numeric: true }) ||
+        current.name.localeCompare(next.name, 'pt-BR'),
+    );
+});
+const indicatorPageSize = 5;
+const indicatorPage = ref(1);
+const indicatorTotalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredIndicators.value.length / indicatorPageSize)),
+);
+const paginatedIndicators = computed(() => {
+  const start = (indicatorPage.value - 1) * indicatorPageSize;
+
+  return filteredIndicators.value.slice(start, start + indicatorPageSize);
+});
+const indicatorPageStart = computed(() =>
+  filteredIndicators.value.length ? (indicatorPage.value - 1) * indicatorPageSize + 1 : 0,
+);
+const indicatorPageEnd = computed(() =>
+  Math.min(indicatorPage.value * indicatorPageSize, filteredIndicators.value.length),
+);
+
+watch([indicatorSearch, indicatorGoalFilter], () => {
+  indicatorPage.value = 1;
+});
+
+watch(indicatorTotalPages, (totalPages) => {
+  if (indicatorPage.value > totalPages) indicatorPage.value = totalPages;
+});
+
+function clearIndicatorFilters() {
+  indicatorSearch.value = '';
+  indicatorGoalFilter.value = null;
+}
 
 type TargetPriority = 'HIGH' | 'MEDIUM' | 'CONTINUOUS';
 
@@ -2148,13 +2606,52 @@ const qualityChecks = [
   'Metodologia documentada',
 ];
 
-const indicatorForm = ref({
+type ObservationStatus = 'DRAFT' | 'REVIEW' | 'PUBLISHED';
+
+interface IndicatorFormState {
+  goal: string | undefined;
+  name: string;
+  unit: string;
+  frequency: string;
+  polarity: string;
+  description: string;
+  includeInitialValue: boolean;
+  initialValue: string;
+  initialPeriod: string;
+  initialSourceId: string | null;
+  initialTerritory: string;
+  initialStatus: ObservationStatus;
+}
+
+interface IndicatorValueFormState {
+  unit: string;
+  period: string;
+  value: string;
+  sourceId: string | null;
+  territory: string;
+  note: string;
+  status: ObservationStatus;
+}
+
+const observationStatusOptions: Array<{ label: string; value: ObservationStatus }> = [
+  { label: 'Publicado', value: 'PUBLISHED' },
+  { label: 'Em revis\u00e3o', value: 'REVIEW' },
+  { label: 'Rascunho', value: 'DRAFT' },
+];
+
+const indicatorForm = ref<IndicatorFormState>({
   goal: goalOptions.value[0],
   name: 'Taxa de acesso a servi\u00e7os essenciais',
   unit: '%',
   frequency: 'Anual',
   polarity: 'Quanto maior, melhor',
   description: 'Descreve como o indicador ser\u00e1 calculado e quais recortes ser\u00e3o aceitos.',
+  includeInitialValue: false,
+  initialValue: '',
+  initialPeriod: String(new Date().getFullYear()),
+  initialSourceId: null,
+  initialTerritory: 'Vit\u00f3ria da Conquista',
+  initialStatus: 'PUBLISHED',
 });
 
 const sourceForm = ref({
@@ -2172,6 +2669,7 @@ const actionForm = ref({
   weight: 3,
   indicatorIds: [] as string[],
   indicatorEffects: {} as Record<string, 'INCREASE' | 'DECREASE' | 'MAINTAIN'>,
+  indicatorValues: {} as Record<string, string>,
   description:
     'A\u00e7\u00e3o demonstrativa para registrar a iniciativa, sua secretaria respons\u00e1vel e o ODS diretamente impactado.',
 });
@@ -2195,10 +2693,10 @@ const selectedActionGoal = computed(() => {
 interface ApiGoal { id: number; title: string; localFocus: string }
 interface ApiDepartment { id: string; name: string }
 interface ApiTarget { id: string; code: string; title: string; description: string; deadline: string; priority: TargetPriority; goalId: number; departmentId?: string | null; department?: ApiDepartment | null }
-interface ApiIndicator { id: string; name: string; description: string; unit: string; frequency: string; polarity: 'HIGHER_IS_BETTER' | 'LOWER_IS_BETTER' | 'CONTEXTUAL'; status: string; goalId: number; target?: { code: string } | null; goal: ApiGoal }
+interface ApiIndicator { id: string; name: string; description: string; unit: string; frequency: string; polarity: 'HIGHER_IS_BETTER' | 'LOWER_IS_BETTER' | 'CONTEXTUAL'; status: string; goalId: number; createdAt?: string; target?: { code: string } | null; goal: ApiGoal; _count?: { observations: number } }
 interface ApiSource { id: string; name: string; description?: string | null; frequency: string; status: string }
-interface ApiObservation { id: string; period: string; displayValue?: string | null; value: string; status: string; indicator: { name: string; goalId: number }; source: ApiSource }
-interface ApiAction { id: string; name: string; description: string; weight: number; goalId: number; department: ApiDepartment; indicatorLinks: Array<{ expectedEffect: 'INCREASE' | 'DECREASE' | 'MAINTAIN'; indicator: ApiIndicator }> }
+interface ApiObservation { id: string; period: string; displayValue?: string | null; value: string; territory: string; note?: string | null; status: ObservationStatus | 'ARCHIVED'; indicatorId: string; sourceId: string; indicator: { name: string; goalId: number }; source: ApiSource }
+interface ApiAction { id: string; name: string; description: string; weight: number; goalId: number; department: ApiDepartment; indicatorLinks: Array<{ expectedEffect: 'INCREASE' | 'DECREASE' | 'MAINTAIN'; newValue?: string | number | null; indicator: ApiIndicator }> }
 type NewsTriageStatus = 'PENDING' | 'CONVERTED' | 'DISMISSED';
 interface ApiTriageNews {
   id: string;
@@ -2215,7 +2713,18 @@ interface ApiTriageNews {
 const apiDepartments = ref<ApiDepartment[]>([]);
 const apiIndicators = ref<ApiIndicator[]>([]);
 const apiSources = ref<ApiSource[]>([]);
+const apiObservations = ref<ApiObservation[]>([]);
 const triageNews = ref<ApiTriageNews[]>([]);
+const indicatorValueDialogOpen = ref(false);
+const selectedValueIndicatorId = ref<string | null>(null);
+const editingObservationId = ref<string | null>(null);
+const indicatorValueForm = ref<IndicatorValueFormState>(emptyIndicatorValueForm());
+const sourceSelectOptions = computed(() =>
+  apiSources.value.map((source) => ({ label: source.name, value: source.id })),
+);
+const selectedValueIndicator = computed(() =>
+  apiIndicators.value.find((indicator) => indicator.id === selectedValueIndicatorId.value) ?? null,
+);
 const targetSearch = ref<string | null>('');
 const targetGoalFilter = ref<number | null>(null);
 const targetDialogOpen = ref(false);
@@ -2233,6 +2742,20 @@ const expectedEffectOptions = [
   { label: 'Reduzir o valor', value: 'DECREASE' as const },
   { label: 'Manter o valor', value: 'MAINTAIN' as const },
 ];
+const actionWeightOptions = [
+  { label: '1 · Complementar', value: 1, description: 'Contribuição pequena ou indireta para o resultado.' },
+  { label: '2 · Apoio', value: 2, description: 'Ajuda o indicador, mas possui alcance limitado.' },
+  { label: '3 · Relevante', value: 3, description: 'Contribuição perceptível e com alcance municipal.' },
+  { label: '4 · Estruturante', value: 4, description: 'Ação importante, contínua ou de grande abrangência.' },
+  { label: '5 · Prioritária', value: 5, description: 'Uma das principais ações para produzir o resultado esperado.' },
+];
+const selectedActionWeight = computed(() =>
+  actionWeightOptions.find((option) => option.value === actionForm.value.weight) ?? actionWeightOptions[2]!,
+);
+
+function actionWeightLabel(weight: number) {
+  return actionWeightOptions.find((option) => option.value === weight)?.label ?? `${weight} de 5`;
+}
 const actionIndicatorOptions = computed(() => {
   const goalId = selectedGoalId(actionForm.value.goal);
   return apiIndicators.value
@@ -2252,6 +2775,18 @@ function defaultExpectedEffect(polarity?: ApiIndicator['polarity']) {
   return 'INCREASE' as const;
 }
 
+type ExpectedIndicatorEffect = 'INCREASE' | 'DECREASE' | 'MAINTAIN';
+
+function requiresNewIndicatorValue(effect?: ExpectedIndicatorEffect) {
+  return effect === 'INCREASE' || effect === 'DECREASE';
+}
+
+function setActionIndicatorEffect(indicatorId: string, effect: ExpectedIndicatorEffect | null) {
+  if (!effect) return;
+  actionForm.value.indicatorEffects[indicatorId] = effect;
+  if (!requiresNewIndicatorValue(effect)) delete actionForm.value.indicatorValues[indicatorId];
+}
+
 watch(() => actionForm.value.goal, () => {
   const validIds = new Set(actionIndicatorOptions.value.map((option) => option.value));
   actionForm.value.indicatorIds = actionForm.value.indicatorIds.filter((id) => validIds.has(id));
@@ -2261,6 +2796,9 @@ watch(() => [...actionForm.value.indicatorIds], (ids) => {
   const selectedIds = new Set(ids);
   for (const id of Object.keys(actionForm.value.indicatorEffects)) {
     if (!selectedIds.has(id)) delete actionForm.value.indicatorEffects[id];
+  }
+  for (const id of Object.keys(actionForm.value.indicatorValues)) {
+    if (!selectedIds.has(id)) delete actionForm.value.indicatorValues[id];
   }
   for (const id of ids) {
     if (!actionForm.value.indicatorEffects[id]) {
@@ -2306,14 +2844,29 @@ const groupedLocalTargets = computed(() => {
       targets,
     }));
 });
-const triageFilter = ref<'ALL' | NewsTriageStatus>('PENDING');
-const filteredTriageNews = computed(() => triageFilter.value === 'ALL'
+const triageFilters = ref<NewsTriageStatus[]>([]);
+const filteredTriageNews = computed(() => !triageFilters.value.length
   ? triageNews.value
-  : triageNews.value.filter((item) => item.triageStatus === triageFilter.value));
+  : triageNews.value.filter((item) => triageFilters.value.includes(item.triageStatus)));
 const triageCounts = computed(() => triageNews.value.reduce((counts, item) => {
   counts[item.triageStatus] += 1;
   return counts;
 }, { PENDING: 0, CONVERTED: 0, DISMISSED: 0 } as Record<NewsTriageStatus, number>));
+
+function toggleTriageFilter(status: NewsTriageStatus) {
+  triageFilters.value = triageFilters.value.includes(status)
+    ? triageFilters.value.filter((item) => item !== status)
+    : [...triageFilters.value, status];
+}
+
+function isTriageFilterActive(status: NewsTriageStatus) {
+  return triageFilters.value.includes(status);
+}
+
+function clearTriageFilters() {
+  triageFilters.value = [];
+}
+
 const frequencyToApi: Record<string, string> = { Mensal: 'MONTHLY', Bimestral: 'BIMONTHLY', Quadrimestral: 'FOUR_MONTHLY', Semestral: 'SEMIANNUAL', Anual: 'ANNUAL', 'Contínua': 'CONTINUOUS' };
 const frequencyFromApi: Record<string, string> = { MONTHLY: 'Mensal', BIMONTHLY: 'Bimestral', QUARTERLY: 'Trimestral', FOUR_MONTHLY: 'Quadrimestral', SEMIANNUAL: 'Semestral', ANNUAL: 'Anual', CONTINUOUS: 'Contínua' };
 const statusFromApi: Record<string, string> = { DRAFT: 'Rascunho', REVIEW: 'Em revisão', PUBLISHED: 'Publicado', ARCHIVED: 'Arquivado' };
@@ -2327,7 +2880,10 @@ async function loadAdminData() {
       auth.request<ApiGoal[]>('/goals'), auth.request<ApiDepartment[]>('/departments'), auth.request<ApiTarget[]>('/targets'),
       auth.request<ApiIndicator[]>('/indicators'), auth.request<ApiSource[]>('/sources'), auth.request<ApiObservation[]>('/observations'), auth.request<ApiAction[]>('/actions'), auth.request<ApiTriageNews[]>('/news/triage'),
     ]);
-    apiDepartments.value = departments; apiIndicators.value = indicatorRows; apiSources.value = sourceRows;
+    apiDepartments.value = departments;
+    apiIndicators.value = indicatorRows;
+    apiSources.value = sourceRows;
+    apiObservations.value = observations;
     departmentOptions.value = departments.map((item) => item.name);
     managedGoals.value = goals.map((goal) => ({
       id: goal.id,
@@ -2341,7 +2897,27 @@ async function loadAdminData() {
           .map((item) => item.source.id),
       ).size,
     }));
-    indicators.value = indicatorRows.map((item) => ({ name: item.name, goal: `ODS ${item.goalId}`, target: item.target?.code ? `Meta local ${item.target.code}` : 'Sem meta vinculada', frequency: frequencyFromApi[item.frequency] ?? item.frequency, status: statusFromApi[item.status] ?? item.status, description: item.description }));
+    indicators.value = indicatorRows.map((item) => {
+      const indicatorObservations = observations.filter((observation) => observation.indicatorId === item.id);
+      const latestObservation = indicatorObservations[0];
+
+      return {
+        id: item.id,
+        name: item.name,
+        goal: `ODS ${item.goalId}`,
+        target: item.target?.code ? `Meta local ${item.target.code}` : 'Sem meta vinculada',
+        frequency: frequencyFromApi[item.frequency] ?? item.frequency,
+        status: statusFromApi[item.status] ?? item.status,
+        description: item.description,
+        unit: item.unit,
+        polarity: polarityFromApi[item.polarity] ?? item.polarity,
+        lastValue: latestObservation
+          ? formatObservedValue(latestObservation.displayValue ?? String(latestObservation.value), item.unit)
+          : 'Sem valores',
+        lastPeriod: latestObservation?.period ?? null,
+        observationCount: indicatorObservations.length,
+      };
+    });
     localTargets.value = targets.map((item) => ({
       id: item.id,
       goalId: item.goalId,
@@ -2395,6 +2971,123 @@ function emptyTargetForm(): TargetFormState {
 }
 function requiredRule(value: unknown) {
   return (value !== null && value !== undefined && String(value).trim().length > 0) || 'Campo obrigatório.';
+}
+function parseLocalizedNumber(value: string) {
+  const compactValue = value.trim().replace(/\s/g, '').replace(/[^\d,.\-+]/g, '');
+  if (!/\d/.test(compactValue)) return Number.NaN;
+  const lastComma = compactValue.lastIndexOf(',');
+  const lastDot = compactValue.lastIndexOf('.');
+  let normalized = compactValue;
+
+  if (lastComma >= 0 && lastDot >= 0) {
+    normalized = lastComma > lastDot
+      ? compactValue.replace(/\./g, '').replace(',', '.')
+      : compactValue.replace(/,/g, '');
+  } else if (lastComma >= 0) {
+    normalized = compactValue.replace(',', '.');
+  }
+
+  return Number(normalized);
+}
+function validNumberRule(value: unknown) {
+  return Number.isFinite(parseLocalizedNumber(String(value ?? ''))) || 'Informe um valor numérico válido.';
+}
+function optionalNumberRule(value: unknown) {
+  return !String(value ?? '').trim() || validNumberRule(value);
+}
+function formatObservedValue(value: string, unit: string) {
+  const normalizedValue = value.trim();
+  const normalizedUnit = unit.trim();
+  if (!normalizedValue) return 'Sem valores';
+  if (!normalizedUnit || normalizedValue.toLocaleLowerCase('pt-BR').includes(normalizedUnit.toLocaleLowerCase('pt-BR'))) {
+    return normalizedValue;
+  }
+  return `${normalizedValue} ${normalizedUnit}`;
+}
+function stripUnitFromValue(value: string, ...units: string[]) {
+  let normalizedValue = value.trim();
+
+  for (const unit of new Set(units.map((item) => item.trim()).filter(Boolean))) {
+    const normalizedUnit = unit.toLocaleLowerCase('pt-BR');
+    let unitIndex = normalizedValue.toLocaleLowerCase('pt-BR').indexOf(normalizedUnit);
+
+    while (unitIndex >= 0) {
+      normalizedValue = (
+        normalizedValue.slice(0, unitIndex)
+        + normalizedValue.slice(unitIndex + unit.length)
+      ).trim();
+      unitIndex = normalizedValue.toLocaleLowerCase('pt-BR').indexOf(normalizedUnit);
+    }
+  }
+
+  return normalizedValue;
+}
+function emptyIndicatorForm(): IndicatorFormState {
+  return {
+    goal: goalOptions.value[0],
+    name: '',
+    unit: '',
+    frequency: 'Anual',
+    polarity: 'Quanto maior, melhor',
+    description: '',
+    includeInitialValue: false,
+    initialValue: '',
+    initialPeriod: String(new Date().getFullYear()),
+    initialSourceId: apiSources.value[0]?.id ?? null,
+    initialTerritory: 'Vitória da Conquista',
+    initialStatus: 'PUBLISHED',
+  };
+}
+function emptyIndicatorValueForm(unit = ''): IndicatorValueFormState {
+  return {
+    unit,
+    period: String(new Date().getFullYear()),
+    value: '',
+    sourceId: apiSources.value[0]?.id ?? null,
+    territory: 'Vitória da Conquista',
+    note: '',
+    status: 'PUBLISHED',
+  };
+}
+function editableObservationStatus(status: ApiObservation['status']): ObservationStatus {
+  return status === 'DRAFT' || status === 'REVIEW' ? status : 'PUBLISHED';
+}
+function openIndicatorValue(indicatorId: string) {
+  const indicator = apiIndicators.value.find((item) => item.id === indicatorId);
+  if (!indicator) {
+    $q.notify({ type: 'info', message: 'Conecte o backend para lançar valores neste indicador demonstrativo.' });
+    return;
+  }
+
+  selectedValueIndicatorId.value = indicatorId;
+  const latestObservation = apiObservations.value.find((item) => item.indicatorId === indicatorId);
+  if (latestObservation) {
+    editingObservationId.value = latestObservation.id;
+    indicatorValueForm.value = {
+      unit: indicator.unit,
+      period: latestObservation.period,
+      value: latestObservation.displayValue ?? String(latestObservation.value),
+      sourceId: latestObservation.sourceId ?? latestObservation.source.id,
+      territory: latestObservation.territory,
+      note: latestObservation.note ?? '',
+      status: editableObservationStatus(latestObservation.status),
+    };
+  } else {
+    editingObservationId.value = null;
+    indicatorValueForm.value = emptyIndicatorValueForm(indicator.unit);
+  }
+  indicatorValueDialogOpen.value = true;
+}
+function startNewIndicatorPeriod() {
+  editingObservationId.value = null;
+  indicatorValueForm.value = emptyIndicatorValueForm(selectedValueIndicator.value?.unit);
+}
+function closeIndicatorValueDialog() {
+  if (adminSaving.value) return;
+  indicatorValueDialogOpen.value = false;
+  selectedValueIndicatorId.value = null;
+  editingObservationId.value = null;
+  indicatorValueForm.value = emptyIndicatorValueForm();
 }
 function openCreateTarget() {
   editingTargetId.value = null;
@@ -2466,6 +3159,14 @@ function formatTriageDate(value?: string | null) {
   if (!value) return 'Data não informada';
   return new Intl.DateTimeFormat('pt-BR').format(new Date(value));
 }
+function formatIndicatorCreationDate(value?: string | null) {
+  if (!value) return 'Não informada';
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(value));
+}
 function actionLaunchLabel(item: ApiTriageNews) {
   if (!item.action) return 'Não';
   if (item.action.status === 'PUBLISHED') return 'Sim · Publicada';
@@ -2474,7 +3175,128 @@ function actionLaunchLabel(item: ApiTriageNews) {
   return 'Sim · Arquivada';
 }
 async function saveIndicator() {
-  await runSave(() => auth.request('/indicators', { method: 'POST', body: JSON.stringify({ name: indicatorForm.value.name, description: indicatorForm.value.description, unit: indicatorForm.value.unit, frequency: frequencyToApi[indicatorForm.value.frequency], polarity: polarityToApi[indicatorForm.value.polarity], status: 'PUBLISHED', goalId: selectedGoalId(indicatorForm.value.goal) }) }), 'Indicador salvo.');
+  const form = indicatorForm.value;
+  const initialValue = parseLocalizedNumber(form.initialValue);
+  if (form.includeInitialValue && (!form.initialSourceId || !form.initialPeriod || !Number.isFinite(initialValue))) {
+    $q.notify({ type: 'warning', message: 'Preencha valor, período e fonte para registrar o primeiro lançamento.' });
+    return;
+  }
+
+  adminSaving.value = true;
+  let savedIndicator: ApiIndicator | null = null;
+  try {
+    savedIndicator = await auth.request<ApiIndicator>('/indicators', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: form.name,
+        description: form.description,
+        unit: form.unit,
+        frequency: frequencyToApi[form.frequency],
+        polarity: polarityToApi[form.polarity],
+        status: 'PUBLISHED',
+        goalId: selectedGoalId(form.goal),
+      }),
+    });
+
+    if (form.includeInitialValue) {
+      await auth.request('/observations', {
+        method: 'POST',
+        body: JSON.stringify({
+          indicatorId: savedIndicator.id,
+          sourceId: form.initialSourceId,
+          territory: form.initialTerritory,
+          period: form.initialPeriod,
+          value: initialValue,
+          displayValue: formatObservedValue(form.initialValue, form.unit),
+          note: 'Valor inicial registrado no cadastro do indicador.',
+          status: form.initialStatus,
+        }),
+      });
+    }
+
+    $q.notify({
+      type: 'positive',
+      message: form.includeInitialValue
+        ? 'Indicador e primeiro valor cadastrados com sucesso.'
+        : 'Indicador cadastrado. Agora você pode iniciar a série pelo card.',
+    });
+    indicatorForm.value = emptyIndicatorForm();
+    await loadAdminData();
+  } catch (error) {
+    if (savedIndicator) {
+      $q.notify({
+        type: 'warning',
+        message: 'O indicador foi criado, mas o valor inicial não pôde ser salvo. Use o card para tentar novamente.',
+      });
+      await loadAdminData();
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: error instanceof Error ? error.message : 'Não foi possível cadastrar o indicador.',
+      });
+    }
+  } finally {
+    adminSaving.value = false;
+  }
+}
+async function saveIndicatorValue() {
+  const indicator = selectedValueIndicator.value;
+  const form = indicatorValueForm.value;
+  const numericValue = parseLocalizedNumber(form.value);
+  if (!indicator || !form.unit || !form.sourceId || !form.period || !form.territory || !Number.isFinite(numericValue)) {
+    $q.notify({ type: 'warning', message: 'Preencha os campos obrigatórios do lançamento.' });
+    return;
+  }
+
+  const matchingObservation = apiObservations.value.find((observation) =>
+    observation.indicatorId === indicator.id
+    && observation.sourceId === form.sourceId
+    && observation.period === form.period
+    && observation.territory.trim() === form.territory.trim(),
+  );
+  if (editingObservationId.value && matchingObservation && matchingObservation.id !== editingObservationId.value) {
+    $q.notify({
+      type: 'warning',
+      message: 'Já existe outro valor para este indicador, fonte, período e território. Edite o lançamento correspondente ou escolha outro período.',
+    });
+    return;
+  }
+  const observationId = editingObservationId.value ?? matchingObservation?.id ?? null;
+  const normalizedUnit = form.unit.trim();
+  const payload = {
+    indicatorId: indicator.id,
+    sourceId: form.sourceId,
+    territory: form.territory,
+    period: form.period,
+    value: numericValue,
+    displayValue: formatObservedValue(
+      stripUnitFromValue(form.value, indicator.unit, normalizedUnit),
+      normalizedUnit,
+    ),
+    note: form.note || undefined,
+    status: form.status,
+  };
+  const unitChanged = normalizedUnit !== indicator.unit.trim();
+  const saved = await runSave(
+    async () => {
+      if (unitChanged) {
+        await auth.request(`/indicators/${indicator.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ unit: normalizedUnit }),
+        });
+      }
+      await auth.request(observationId ? `/observations/${observationId}` : '/observations', {
+        method: observationId ? 'PATCH' : 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+    unitChanged
+      ? 'Unidade de medida e valor atualizados com sucesso.'
+      : observationId
+        ? 'Valor atualizado sem perder os demais períodos da série.'
+        : 'Novo valor registrado e incluído no gráfico do indicador.',
+  );
+  if (saved) closeIndicatorValueDialog();
 }
 async function saveSource() {
   await runSave(() => auth.request('/sources', { method: 'POST', body: JSON.stringify({ name: sourceForm.value.name, url: sourceForm.value.url, frequency: frequencyToApi[sourceForm.value.frequency], technicalOwner: sourceForm.value.owner, publicReusable: sourceForm.value.publicReusable, status: 'PUBLISHED' }) }), 'Fonte salva.');
@@ -2485,22 +3307,43 @@ async function saveAction(status: 'DRAFT' | 'PUBLISHED') {
     $q.notify({ type: 'warning', message: 'Relacione ao menos um indicador antes de publicar a ação.' });
     return;
   }
-  const indicatorLinks = actionForm.value.indicatorIds.map((indicatorId) => ({
-    indicatorId,
-    expectedEffect: actionForm.value.indicatorEffects[indicatorId] ?? defaultExpectedEffect(apiIndicators.value.find((item) => item.id === indicatorId)?.polarity),
-  }));
+  const invalidValueIndicator = selectedActionIndicators.value.find((indicator) => {
+    const effect = actionForm.value.indicatorEffects[indicator.id] ?? defaultExpectedEffect(indicator.polarity);
+    if (!requiresNewIndicatorValue(effect)) return false;
+    const rawValue = actionForm.value.indicatorValues[indicator.id]?.trim() ?? '';
+    return (status === 'PUBLISHED' && !rawValue) || (Boolean(rawValue) && !Number.isFinite(parseLocalizedNumber(rawValue)));
+  });
+  if (invalidValueIndicator) {
+    $q.notify({
+      type: 'warning',
+      message: `Informe um novo valor válido para o indicador “${invalidValueIndicator.name}”.`,
+    });
+    return;
+  }
+  const indicatorLinks = actionForm.value.indicatorIds.map((indicatorId) => {
+    const effect = actionForm.value.indicatorEffects[indicatorId]
+      ?? defaultExpectedEffect(apiIndicators.value.find((item) => item.id === indicatorId)?.polarity);
+    const rawValue = actionForm.value.indicatorValues[indicatorId]?.trim() ?? '';
+    return {
+      indicatorId,
+      expectedEffect: effect,
+      newValue: requiresNewIndicatorValue(effect) && rawValue
+        ? parseLocalizedNumber(rawValue)
+        : undefined,
+    };
+  });
   await runSave(() => auth.request('/actions', { method: 'POST', body: JSON.stringify({ name: actionForm.value.name, description: actionForm.value.description, weight: actionForm.value.weight, status, goalId: selectedGoalId(actionForm.value.goal), departmentId: department?.id, indicatorLinks }) }), status === 'DRAFT' ? 'Rascunho salvo.' : 'Ação criada e relacionada aos indicadores.');
 }
-async function saveObservation(status: 'DRAFT' | 'REVIEW' | 'PUBLISHED') {
+async function saveObservation(status: ObservationStatus) {
   const indicator = apiIndicators.value.find((item) => item.name === entryForm.value.indicator);
   const source = apiSources.value.find((item) => item.name === entryForm.value.source);
-  const normalized = entryForm.value.value.replace(/\./g, '').replace(',', '.');
+  const normalized = parseLocalizedNumber(entryForm.value.value);
   const message = status === 'DRAFT'
     ? 'Rascunho salvo.'
     : status === 'REVIEW'
       ? 'Lançamento enviado para revisão.'
       : 'Lançamento publicado e incluído no gráfico do indicador.';
-  await runSave(() => auth.request('/observations', { method: 'POST', body: JSON.stringify({ indicatorId: indicator?.id, sourceId: source?.id, territory: entryForm.value.territory, period: entryForm.value.period, value: Number(normalized), displayValue: entryForm.value.value, note: entryForm.value.note, status }) }), message);
+  await runSave(() => auth.request('/observations', { method: 'POST', body: JSON.stringify({ indicatorId: indicator?.id, sourceId: source?.id, territory: entryForm.value.territory, period: entryForm.value.period, value: normalized, displayValue: entryForm.value.value, note: entryForm.value.note, status }) }), message);
 }
 
 onMounted(loadAdminData);
