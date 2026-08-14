@@ -82,8 +82,8 @@
               <p class="text-xs font-black uppercase tracking-wide text-lime-200">Ações vinculadas</p>
               <p class="mt-3 text-2xl font-black leading-tight text-white">O que acompanhar agora</p>
             </div>
-            <span v-if="detail.actions.length > 3" class="vc-ods-actions-scope">
-              {{ actionsExpanded ? 'Histórico completo' : 'Últimas 3' }}
+            <span v-if="detail.actions.length > 2" class="vc-ods-actions-scope">
+              2 mais recentes
             </span>
           </div>
           <div class="mt-5 space-y-3">
@@ -102,22 +102,15 @@
               Nenhuma ação publicada para este objetivo.
             </p>
           </div>
-          <div v-if="detail.actions.length > 3" class="vc-ods-actions-toggle-wrap">
-            <q-btn
-              class="vc-ods-actions-toggle"
-              flat
-              dense
-              no-caps
-              :icon-right="actionsExpanded ? 'expand_less' : 'expand_more'"
-              :label="actionsExpanded ? 'Mostrar somente as 3 últimas' : `Ver ${hiddenActionCount} ações anteriores`"
-              :aria-expanded="actionsExpanded"
-              @click="actionsExpanded = !actionsExpanded"
-            />
+          <div v-if="hiddenActionCount > 0" class="vc-ods-actions-toggle-wrap">
+            <span class="vc-ods-actions-toggle">
+              + {{ hiddenActionCount }} {{ hiddenActionCount === 1 ? 'ação adicional' : 'ações adicionais' }} no histórico
+            </span>
           </div>
         </aside>
       </section>
 
-      <section v-if="detail.actions.length > 1" class="vc-ods-action-progress mt-8">
+      <section v-if="chartableIndicators.length > 0" class="vc-ods-action-progress mt-8">
         <header class="vc-ods-action-progress-head">
           <div>
             <p class="text-xs font-black uppercase tracking-wide text-[#1d6d13]">
@@ -249,14 +242,28 @@
             <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">
               Ações que podem influenciar
             </p>
-            <div v-if="linkedActionsForSelected.length" class="mt-3 space-y-2">
-              <div v-for="action in linkedActionsForSelected" :key="action.id" class="vc-ods-linked-action">
-                <q-icon name="conversion_path" size="16px" />
-                <span>
-                  <strong>{{ action.name }}</strong>
-                  <small>{{ expectedEffectLabel(action.effect) }}{{ action.newValue === null ? '' : ` · novo valor: ${formatActionValue(action.newValue, action.unit)}` }}</small>
-                </span>
+            <div v-if="linkedActionsForSelected.length" class="mt-3">
+              <div class="vc-ods-linked-actions-list space-y-2" :class="{ 'is-expanded': linkedActionsExpanded }">
+                <div v-for="action in visibleLinkedActionsForSelected" :key="action.id" class="vc-ods-linked-action">
+                  <q-icon name="conversion_path" size="16px" />
+                  <span>
+                    <strong>{{ action.name }}</strong>
+                    <small>{{ expectedEffectLabel(action.effect) }}{{ action.newValue === null ? '' : ` · novo valor: ${formatActionValue(action.newValue, action.unit)}` }}</small>
+                  </span>
+                </div>
               </div>
+              <q-btn
+                v-if="hiddenLinkedActionsCount > 0"
+                class="mt-2 w-full"
+                flat
+                dense
+                no-caps
+                color="green-9"
+                :icon-right="linkedActionsExpanded ? 'expand_less' : 'expand_more'"
+                :label="linkedActionsExpanded ? 'Mostrar somente 3 ações' : `Ver mais ${hiddenLinkedActionsCount} ações`"
+                :aria-expanded="linkedActionsExpanded"
+                @click="linkedActionsExpanded = !linkedActionsExpanded"
+              />
             </div>
             <p v-else class="mt-3 text-xs leading-5 text-slate-500">
               Nenhuma ação foi relacionada diretamente a este indicador.
@@ -269,15 +276,6 @@
           </aside>
         </div>
 
-        <div v-else class="vc-ods-indicator-empty mt-6">
-          <q-icon name="timeline" size="32px" />
-          <div>
-            <p class="text-sm font-black text-slate-950">Série histórica ainda insuficiente</p>
-            <p class="mt-1 text-sm leading-6 text-slate-500">
-              Publique pelo menos dois lançamentos do mesmo indicador para calcular sua variação.
-            </p>
-          </div>
-        </div>
       </section>
 
       <section class="vc-ods-analytics mt-8">
@@ -455,7 +453,7 @@ type OdsDetailPayload = Omit<OdsDetail, 'actions'> & {
 
 const route = useRoute();
 const detail = ref<OdsDetail>();
-const actionsExpanded = ref(false);
+const linkedActionsExpanded = ref(false);
 const selectedIndicatorId = ref<string>();
 const actionChartContainer = ref<HTMLElement>();
 const actionChartContainerWidth = ref(680);
@@ -465,9 +463,9 @@ const normalizedScore = computed(() => Math.round(Math.max(0, Math.min(100, deta
 const scoreRingStyle = computed(() => ({ background: `conic-gradient(var(--ods-color) 0 ${normalizedScore.value}%, #e6ece6 ${normalizedScore.value}% 100%)` }));
 const visibleActions = computed(() => {
   const actions = detail.value?.actions ?? [];
-  return actionsExpanded.value ? actions : actions.slice(-3);
+  return actions.slice(-2);
 });
-const hiddenActionCount = computed(() => Math.max(0, (detail.value?.actions.length ?? 0) - 3));
+const hiddenActionCount = computed(() => Math.max(0, (detail.value?.actions.length ?? 0) - 2));
 const chartableIndicators = computed(() =>
   (detail.value?.indicators ?? []).filter((indicator) => indicator.observations.length > 1),
 );
@@ -580,6 +578,12 @@ const linkedActionsForSelected = computed(() => {
     }] : [];
   });
 });
+const visibleLinkedActionsForSelected = computed(() =>
+  linkedActionsExpanded.value ? linkedActionsForSelected.value : linkedActionsForSelected.value.slice(0, 3),
+);
+const hiddenLinkedActionsCount = computed(() =>
+  Math.max(0, linkedActionsForSelected.value.length - 3),
+);
 const coverageMetrics = computed(() => {
   const current = detail.value;
   if (!current) return [];
@@ -711,9 +715,13 @@ watch(chartableIndicators, (indicators) => {
   }
 }, { immediate: true });
 
+watch(selectedIndicatorId, () => {
+  linkedActionsExpanded.value = false;
+});
+
 watch(() => route.params.id, async (id) => {
   const goalId = Number(id);
-  actionsExpanded.value = false;
+  linkedActionsExpanded.value = false;
   try {
     detail.value = normalizeOdsDetail(await apiRequest<OdsDetailPayload>(`/goals/${goalId}`));
   } catch {
