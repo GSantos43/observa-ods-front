@@ -1,5 +1,6 @@
 <template>
-  <div class="display-page">
+  <div class="display-viewport" :class="{ 'theme-light': !isDarkTheme }">
+    <div class="display-page" :style="displaySurfaceStyle">
     <header class="display-header">
       <div class="brand">
         <img :src="brandImageUrl" alt="ObservaODS" />
@@ -18,14 +19,24 @@
           <span>{{ currentDate }}</span>
         </div>
         <q-btn
-          flat round color="white"
+          flat round
+          class="header-control"
+          :icon="isDarkTheme ? 'light_mode' : 'dark_mode'"
+          :aria-label="isDarkTheme ? 'Ativar tema claro' : 'Ativar tema escuro'"
+          :aria-pressed="!isDarkTheme"
+          @click="toggleTheme"
+        >
+          <q-tooltip>{{ isDarkTheme ? 'Tema claro' : 'Tema escuro' }}</q-tooltip>
+        </q-btn>
+        <q-btn
+          flat round class="header-control"
           :icon="isFullscreen ? 'fullscreen_exit' : 'fullscreen'"
           :aria-label="isFullscreen ? 'Sair da tela cheia' : 'Ativar tela cheia'"
           @click="toggleFullscreen"
         >
           <q-tooltip>{{ isFullscreen ? 'Sair da tela cheia' : 'Tela cheia' }}</q-tooltip>
         </q-btn>
-        <q-btn flat round color="white" icon="close" aria-label="Voltar ao painel" to="/admin">
+        <q-btn flat round class="header-control" icon="close" aria-label="Voltar ao painel" to="/admin">
           <q-tooltip>Voltar ao painel</q-tooltip>
         </q-btn>
       </div>
@@ -268,6 +279,7 @@
       </nav>
       <span>Fonte: ObservaODS &bull; 2026</span>
     </footer>
+    </div>
   </div>
 </template>
 
@@ -301,8 +313,17 @@ interface NewsItem {
 
 const auth = useAuthStore();
 const brandImageUrl = new URL('../assets/logo.png', import.meta.url).href;
+const THEME_STORAGE_KEY = 'observaods-display-theme';
+const DISPLAY_WIDTH = 1920;
+const DISPLAY_HEIGHT = 1080;
+const CAROUSEL_DURATION_MS = 7500;
 const now = ref(new Date());
 const isFullscreen = ref(Boolean(document.fullscreenElement));
+const isDarkTheme = ref(readInitialTheme());
+const displayScale = ref(Math.min(
+  window.innerWidth / DISPLAY_WIDTH,
+  window.innerHeight / DISPLAY_HEIGHT,
+));
 const highlightIndex = ref(0);
 const slideIndex = ref(0);
 const carouselPaused = ref(false);
@@ -322,10 +343,16 @@ const currentDate = computed(() => new Intl.DateTimeFormat('pt-BR', { weekday: '
 const weatherTemperature = computed(() => weather.value?.temperature_2m == null ? '--°' : `${Math.round(weather.value.temperature_2m)}°`);
 const weatherDescription = computed(() => describeWeather(weather.value?.weather_code));
 const weatherIcon = computed(() => iconForWeather(weather.value?.weather_code, weather.value?.is_day !== 0));
+const displaySurfaceStyle = computed(() => ({
+  width: `${DISPLAY_WIDTH}px`,
+  height: `${DISPLAY_HEIGHT}px`,
+  transform: `translate(-50%, -50%) scale(${displayScale.value})`,
+  '--carousel-duration': `${CAROUSEL_DURATION_MS}ms`,
+}));
 const metrics = computed(() => [
   { label: 'ODS monitorados', value: dashboard.value.goals, caption: 'Objetivos acompanhados no município', icon: 'flag' },
   { label: 'Indicadores ativos', value: dashboard.value.indicators, caption: 'Evidências sobre a realidade local', icon: 'query_stats' },
-  { label: 'Fontes integradas', value: dashboard.value.sources, caption: 'Bases institucionais consolidadas', icon: 'database' },
+  { label: 'Fontes integradas', value: dashboard.value.sources, caption: 'Bases institucionais consolidadas', icon: 'web' },
   { label: 'Dados publicados', value: '84%', caption: 'Indicadores tecnicamente validados', icon: 'verified' },
 ]);
 
@@ -374,7 +401,32 @@ const featuredNews = computed(() => news.value[0]);
 const secondaryNews = computed(() => news.value.slice(1, 4));
 
 function goalImage(id: number) { return new URL(`../assets/${id}.jpg`, import.meta.url).href; }
-function updateFullscreenState() { isFullscreen.value = Boolean(document.fullscreenElement); }
+function readInitialTheme() {
+  try {
+    const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (!savedTheme) return false;
+    if (savedTheme === 'light') return false;
+    if (savedTheme === 'dark') return true;
+  } catch { /* A exibição continua com a preferência do sistema quando o armazenamento não está disponível. */ }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function updateDisplayScale() {
+  displayScale.value = Math.min(
+    window.innerWidth / DISPLAY_WIDTH,
+    window.innerHeight / DISPLAY_HEIGHT,
+  );
+}
+function updateFullscreenState() {
+  isFullscreen.value = Boolean(document.fullscreenElement);
+  window.requestAnimationFrame(updateDisplayScale);
+}
+function toggleTheme() {
+  isDarkTheme.value = !isDarkTheme.value;
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, isDarkTheme.value ? 'dark' : 'light');
+  } catch { /* A alternância permanece ativa durante a sessão. */ }
+}
 function hideBrokenImage(event: Event) { (event.currentTarget as HTMLImageElement).style.display = 'none'; }
 function describeWeather(code?: number) {
   if (code == null) return 'Clima indisponível';
@@ -417,7 +469,7 @@ function startCarousel() {
   if (carouselTimer) window.clearInterval(carouselTimer);
   carouselTimer = window.setInterval(() => {
     slideIndex.value = (slideIndex.value + 1) % displaySlides.length;
-  }, 15_000);
+  }, CAROUSEL_DURATION_MS);
 }
 function showSlide(index: number) {
   slideIndex.value = index;
@@ -454,6 +506,8 @@ function toggleCarousel() {
 onMounted(async () => {
   document.addEventListener('fullscreenchange', updateFullscreenState);
   document.addEventListener('keydown', handleCarouselKeyboard);
+  window.addEventListener('resize', updateDisplayScale);
+  updateDisplayScale();
   clockTimer = window.setInterval(() => { now.value = new Date(); }, 1000);
   rotationTimer = window.setInterval(() => { highlightIndex.value = (highlightIndex.value + 1) % highlights.length; }, 8000);
   weatherTimer = window.setInterval(() => { void loadWeather(); }, 15 * 60 * 1000);
@@ -467,6 +521,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   document.removeEventListener('fullscreenchange', updateFullscreenState);
   document.removeEventListener('keydown', handleCarouselKeyboard);
+  window.removeEventListener('resize', updateDisplayScale);
   if (clockTimer) window.clearInterval(clockTimer);
   if (rotationTimer) window.clearInterval(rotationTimer);
   if (weatherTimer) window.clearInterval(weatherTimer);
@@ -601,7 +656,7 @@ onBeforeUnmount(() => {
 .slide-indicator { position: relative; width: 48px; height: 9px; overflow: hidden; border: 0; border-radius: 99px; background: rgba(255,255,255,.22); cursor: pointer; }
 .slide-indicator:hover, .slide-indicator:focus-visible { background: rgba(255,255,255,.38); outline: 2px solid rgba(163,230,53,.45); outline-offset: 3px; }
 .slide-indicator.active { width: 82px; background: rgba(163,230,53,.22); }
-.slide-indicator > i { position: absolute; inset: 0 auto 0 0; width: 100%; border-radius: inherit; background: #a3e635; animation: carousel-progress 15s linear; }
+.slide-indicator > i { position: absolute; inset: 0 auto 0 0; width: 100%; border-radius: inherit; background: #a3e635; animation: carousel-progress var(--carousel-duration) linear; }
 .carousel-control { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid rgba(255,255,255,.22); border-radius: 50%; background: rgba(255,255,255,.04); color: #d4e3d8; cursor: pointer; }
 .carousel-control:hover, .carousel-control:focus-visible { border-color: #a3e635; background: rgba(163,230,53,.14); color: #c9f477; outline: none; }
 .pause-button { margin-left: 4px; }
@@ -718,4 +773,271 @@ onBeforeUnmount(() => {
   .news-featured { min-height: 520px; }
   .news-card { grid-template-columns: 110px minmax(0,1fr); }
 }
+
+/* Superfície de exibição: mantém todo o painel dentro do viewport em qualquer proporção. */
+.display-viewport {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: #03120a;
+  color-scheme: dark;
+}
+
+.display-page {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  max-height: none;
+  overflow: hidden;
+  transform-origin: center;
+  will-change: transform;
+  transition: background-color 220ms ease, color 220ms ease;
+}
+
+.display-page,
+.display-page * {
+  box-sizing: border-box;
+}
+
+.display-header,
+.display-footer {
+  flex: 0 0 auto;
+}
+
+.display-content,
+.display-content > section,
+.display-content > aside {
+  min-width: 0;
+}
+
+.display-content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.header-control {
+  color: #fff !important;
+}
+
+.header-control:focus-visible {
+  outline: 2px solid #a3e635;
+  outline-offset: 2px;
+}
+
+/* Canvas canônico 1920x1080. Estas regras anulam breakpoints do viewport físico:
+   o layout nunca reflui; somente o canvas completo é redimensionado. */
+.display-header { height: 120px; min-height: 0; padding: 0 72px; }
+.brand img { width: auto; height: 66px; max-width: 220px; }
+.header-actions { gap: 28px; }
+.weather { gap: 15px; padding-right: 28px; }
+.weather-icon { font-size: 46px; }
+.weather-copy { min-width: 132px; }
+.weather-copy strong { font-size: 40px; }
+.weather-copy span { display: block; font-size: 12px; }
+.clock strong { font-size: 52px; }
+.clock span { display: block; font-size: 13px; }
+.display-content { padding: 32px 72px; gap: 28px; }
+.intro { align-items: end; }
+.eyebrow,
+.panel-heading span,
+.highlight-top span { font-size: 14px; }
+.intro h1 { font-size: 52px; }
+.intro-copy { display: block; font-size: 18px; line-height: 1.45; }
+.city-badge { display: flex; padding: 11px 17px; font-size: 15px; }
+.metric-grid { grid-template-columns: repeat(4, 1fr); gap: 15px; }
+.metric-card { min-height: 132px; gap: 20px; padding: 22px 24px; }
+.metric-icon { width: 58px; height: 58px; font-size: 31px; }
+.metric-card strong { font-size: 46px; }
+.metric-card p { margin-top: 7px; font-size: 16px; }
+.metric-card span { font-size: 13px; }
+.dashboard-grid { grid-template-columns: minmax(0,1.8fr) minmax(300px,.8fr); gap: 16px; }
+.panel { padding: 34px; }
+.panel-heading h2 { font-size: 30px; }
+.legend { gap: 8px; font-size: 13px; }
+.legend i { width: 10px; height: 10px; }
+.goals-grid { grid-template-columns: repeat(2,1fr); gap: 20px 40px; margin-top: 30px; }
+.goal-row { gap: 16px; }
+.goal-row img { width: 58px; height: 58px; }
+.goal-info > div:first-child { font-size: 15px; }
+.progress-track { height: 9px; margin-top: 10px; }
+.progress-panel .panel-heading > div > span,
+.ods-wall .panel-heading > div > span { font-size: 18px; }
+.progress-panel .panel-heading h2,
+.ods-wall .panel-heading h2 { font-size: 34px; }
+.progress-panel .legend { font-size: 16px; }
+.progress-panel .legend i { width: 12px; height: 12px; }
+.progress-panel .goals-grid { gap: 24px 44px; margin-top: 32px; }
+.progress-panel .goal-row { gap: 18px; }
+.progress-panel .goal-row img { width: 70px; height: 70px; }
+.progress-panel .goal-info > div:first-child { font-size: 18px; }
+.progress-panel .progress-track { height: 11px; margin-top: 12px; }
+.highlight-icon { width: 64px; height: 64px; font-size: 34px; }
+.highlight-body p { margin-top: 20px; font-size: 13px; }
+.highlight-body h2 { font-size: 32px; }
+.highlight-body strong { font-size: 72px; }
+.highlight-body > span { font-size: 16px; line-height: 1.65; }
+.dots button { width: 28px; height: 6px; }
+.dots button.active { width: 48px; }
+.feature-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.feature-card { min-height: 0; padding: 42px; }
+.feature-icon { width: 64px; height: 64px; font-size: 34px; }
+.feature-tag { font-size: 14px; }
+.feature-card > strong { margin-top: 36px; font-size: 78px; }
+.feature-card h2 { margin-top: 18px; font-size: 30px; }
+.feature-card p { display: block; margin-top: 12px; font-size: 16px; line-height: 1.6; }
+.message-panel { padding: 20px 28px; }
+.message-panel p { font-size: 21px; }
+.actions-layout { grid-template-columns: minmax(0,1.35fr) minmax(360px,.75fr); gap: 20px; }
+.actions-list { gap: 14px; }
+.action-card { grid-template-columns: 72px minmax(0,1fr) auto; gap: 22px; padding: 22px 26px; }
+.action-icon { width: 66px; height: 66px; font-size: 34px; }
+.action-card h2 { font-size: 29px; }
+.action-card p { display: block; font-size: 14px; }
+.action-card > strong { display: block; }
+.ods-wall-grid { gap: 18px 24px; margin-top: 24px; }
+.ods-wall-grid > div { gap: 16px; }
+.ods-wall-grid img { width: 100px; height: 100px; }
+.ods-wall-grid span { font-size: 18px; font-weight: 750; line-height: 1.35; }
+.display-footer { height: 58px; padding: 0 72px; font-size: 13px; }
+.display-footer > span:last-child { display: flex; }
+.goal-detail-hero { grid-template-columns: auto minmax(0,1fr) auto; gap: 48px; }
+.goal-detail-hero > img { width: 154px; height: 154px; }
+.goal-detail-hero h1 { font-size: 52px; }
+.goal-detail-hero > div > p:last-child { margin-top: 12px; font-size: 18px; }
+.goal-score-seal { min-width: 210px; grid-column: auto; padding: 20px 28px; }
+.goal-score-seal strong { font-size: 72px; }
+.goal-explanation-grid { grid-template-columns: minmax(0,1.25fr) minmax(390px,.75fr); gap: 18px; }
+.goal-reading-copy { margin-top: 26px; font-size: 18px; }
+.score-scale { padding-top: 34px; }
+.dimension-list { gap: 16px; }
+.dimension-list > div { grid-template-columns: 48px minmax(0,1fr); gap: 14px; }
+.dimension-list > div > span { width: 46px; height: 46px; font-size: 24px; }
+.goal-context-note { padding: 14px 20px; }
+.goal-context-note > span { display: block; }
+.news-layout { grid-template-columns: minmax(0,1.35fr) minmax(420px,.8fr); gap: 20px; }
+.news-featured { min-height: 0; grid-template-rows: minmax(180px,55%) minmax(0,45%); }
+.news-featured-copy { padding: 27px; }
+.news-featured-copy h2 { margin-top: 9px; font-size: 31px; -webkit-line-clamp: 3; }
+.news-featured-copy p { display: -webkit-box; margin-top: 8px; font-size: 13px; line-height: 1.45; -webkit-line-clamp: 2; }
+.news-featured-copy > strong { margin-top: 13px; }
+.news-list { gap: 14px; }
+.news-card { grid-template-columns: 155px minmax(0,1fr); gap: 18px; padding: 13px; }
+.news-card-image { min-height: 100px; }
+.news-card h3 { margin-top: 8px; font-size: 20px; -webkit-line-clamp: 3; }
+
+/* Tema claro */
+.display-viewport.theme-light {
+  background: #dce8de;
+  color-scheme: light;
+}
+
+.theme-light .display-page {
+  background: radial-gradient(circle at 80% 0,rgba(87,180,91,.16),transparent 32%),#edf4ee;
+  color: #14241a;
+}
+
+.theme-light .display-header {
+  border-bottom-color: rgba(24,67,39,.15);
+  background: rgba(247,251,247,.9);
+}
+
+.theme-light .brand {
+  padding: 5px 12px;
+  border-radius: 12px;
+  background: #082719;
+  box-shadow: 0 8px 22px rgba(14,55,31,.14);
+}
+
+.theme-light .header-control { color: #214b2e !important; }
+.theme-light .weather { border-right-color: rgba(24,67,39,.18); }
+.theme-light .weather-icon,
+.theme-light .eyebrow,
+.theme-light .panel-heading span,
+.theme-light .highlight-top span,
+.theme-light .news-card span,
+.theme-light .action-card div > span { color: #357d20; }
+.theme-light .weather-copy span,
+.theme-light .clock span,
+.theme-light .intro-copy,
+.theme-light .metric-card span,
+.theme-light .legend,
+.theme-light .highlight-body > span,
+.theme-light .feature-tag,
+.theme-light .feature-card p,
+.theme-light .action-card p,
+.theme-light .ods-wall-grid span,
+.theme-light .goal-detail-hero > div > p:last-child,
+.theme-light .goal-reading-copy,
+.theme-light .dimension-list p,
+.theme-light .news-featured-copy > span,
+.theme-light .news-featured-copy p,
+.theme-light .news-empty p { color: #526b59; }
+
+.theme-light .city-badge,
+.theme-light .metric-card,
+.theme-light .panel,
+.theme-light .feature-card,
+.theme-light .message-panel,
+.theme-light .action-card,
+.theme-light .goal-context-note,
+.theme-light .news-featured,
+.theme-light .news-card {
+  border-color: rgba(25,78,42,.15);
+  background: rgba(255,255,255,.72);
+  box-shadow: 0 14px 34px rgba(40,74,49,.08);
+}
+
+.theme-light .metric-card {
+  background: linear-gradient(145deg,rgba(255,255,255,.96),rgba(230,240,232,.82));
+}
+.theme-light .metric-icon,
+.theme-light .action-icon { background: rgba(64,133,39,.12); color: #397c25; }
+.theme-light .city-badge { color: #365943; }
+.theme-light .goal-info span { color: #294936; }
+.theme-light .goal-info strong { color: #14241a; }
+.theme-light .progress-track { background: rgba(28,70,41,.12); }
+.theme-light .highlight-panel { background: linear-gradient(155deg,rgba(180,221,180,.8),rgba(255,255,255,.82)); }
+.theme-light .highlight-icon,
+.theme-light .feature-icon { background: #4e8d31; color: #fff; }
+.theme-light .highlight-body p,
+.theme-light .highlight-body strong,
+.theme-light .feature-card > strong,
+.theme-light .action-card > strong,
+.theme-light .news-featured-copy > strong { color: #347820; }
+.theme-light .feature-card--2 { background: linear-gradient(150deg,rgba(199,225,229,.8),rgba(255,255,255,.8)); }
+.theme-light .feature-card--3 { background: linear-gradient(150deg,rgba(235,221,191,.76),rgba(255,255,255,.82)); }
+.theme-light .message-panel .q-icon,
+.theme-light .news-empty .q-icon { color: #357d20; }
+.theme-light .ods-wall { background: rgba(255,255,255,.78); }
+.theme-light .favorable-badge { background: rgba(64,133,39,.12); color: #32731f!important; }
+.theme-light .goal-score-seal { border-color: rgba(64,133,39,.28); background: rgba(92,154,67,.1); }
+.theme-light .goal-score-seal span,
+.theme-light .goal-score-seal small { color: #526b59; }
+.theme-light .goal-score-seal strong { color: #347820; }
+.theme-light .dimension-list > div > span { background: rgba(25,126,153,.11); color: #17758d; }
+.theme-light .goal-context-note > .q-icon { color: #357d20; }
+.theme-light .goal-context-note p { color: #486150; }
+.theme-light .goal-context-note p strong { color: #1d3324; }
+.theme-light .goal-context-note > span { color: #687d6d; }
+.theme-light .news-featured-image { background: linear-gradient(145deg,#bcd7c2,#e6efe8); }
+.theme-light .news-image-fallback { color: rgba(32,80,45,.2); }
+.theme-light .news-card-image { background: rgba(64,133,39,.1); color: rgba(52,120,32,.42); }
+.theme-light .news-featured:hover,
+.theme-light .news-card:hover { border-color: rgba(53,125,32,.34); background: rgba(255,255,255,.92); }
+.theme-light .display-footer { border-top-color: rgba(24,67,39,.14); color: #58705f; }
+.theme-light .slide-indicator { background: rgba(30,73,43,.2); }
+.theme-light .slide-indicator:hover,
+.theme-light .slide-indicator:focus-visible { background: rgba(30,73,43,.34); }
+.theme-light .slide-indicator.active { background: rgba(69,133,45,.22); }
+.theme-light .slide-indicator > i { background: #4b8b30; }
+.theme-light .carousel-control { border-color: rgba(28,74,41,.24); background: rgba(255,255,255,.54); color: #355840; }
+.theme-light .carousel-control:hover,
+.theme-light .carousel-control:focus-visible { border-color: #4b8b30; background: rgba(75,139,48,.12); color: #347820; }
 </style>
