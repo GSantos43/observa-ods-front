@@ -1984,11 +1984,17 @@ const adminSections = [
     caption: 'Resumo e pend\u00eancias',
     icon: 'space_dashboard',
   },
+  // {
+  //   id: 'semaforo',
+  //   label: 'Monitoramento ODS',
+  //   caption: 'Faixas de desempenho',
+  //   icon: 'traffic',
+  // },
   {
-    id: 'semaforo',
-    label: 'Monitoramento ODS',
-    caption: 'Faixas de desempenho',
-    icon: 'traffic',
+    id: 'lancamentos',
+    label: 'Lan\u00e7amentos',
+    caption: 'S\u00e9rie hist\u00f3rica',
+    icon: 'edit_note',
   },
   {
     id: 'triagem',
@@ -1996,7 +2002,6 @@ const adminSections = [
     caption: 'Notícias para ações',
     icon: 'fact_check',
   },
-  { id: 'objetivos', label: 'Objetivos ODS', caption: 'Temas municipais', icon: 'flag' },
   {
     id: 'indicadores',
     label: 'Indicadores',
@@ -2010,13 +2015,9 @@ const adminSections = [
     caption: 'Cadastro por secretaria',
     icon: 'add_task',
   },
-  { id: 'fontes', label: 'Fontes de dados', caption: 'Bases e evid\u00eancias', icon: 'dataset' },
-  {
-    id: 'lancamentos',
-    label: 'Lan\u00e7amentos',
-    caption: 'S\u00e9rie hist\u00f3rica',
-    icon: 'edit_note',
-  },
+
+  { id: 'objetivos', label: 'Objetivos ODS', caption: 'Temas municipais', icon: 'flag' },
+  // { id: 'fontes', label: 'Fontes de dados', caption: 'Bases e evid\u00eancias', icon: 'dataset' },
 ] satisfies Array<{ id: AdminSection; label: string; caption: string; icon: string }>;
 
 const semaphoreMeta: Record<SemaphoreStatus, { label: string; color: string; text: string }> = {

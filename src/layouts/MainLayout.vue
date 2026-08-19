@@ -11,7 +11,7 @@
             <img
               :src="brandImageUrl"
               alt="ObservaODS"
-              class="h-14 w-auto max-w-[132px] shrink-0 object-contain drop-shadow-sm sm:h-16 sm:max-w-[180px]"
+              class="h-14 w-auto max-w-33 shrink-0 object-contain drop-shadow-sm sm:h-16 sm:max-w-45"
             />
           </RouterLink>
         </q-toolbar-title>
@@ -28,7 +28,7 @@
             :label="group.label"
             content-class="vc-header-dropdown"
           >
-            <q-list dense padding class="min-w-[250px]">
+            <q-list dense padding class="min-w-62.5">
               <q-item
                 v-for="item in group.items"
                 :key="item.to"
@@ -105,7 +105,7 @@
           <q-list
             dense
             padding
-            class="vc-mobile-menu-list box-border max-h-[calc(100vh-16px)] w-[360px] max-w-[calc(100vw-16px)] overflow-x-hidden overflow-y-auto"
+            class="vc-mobile-menu-list box-border max-h-[calc(100vh-16px)]! w-[360px] max-w-[calc(100vw-16px)] overflow-x-hidden overflow-y-auto"
           >
             <template v-if="auth.isAuthenticated && auth.user">
               <q-item class="mb-1">

@@ -6,7 +6,7 @@
       :style="{ backgroundImage: `url(${heroImageUrl})` }"
     >
       <div
-        class="absolute inset-0 bg-gradient-to-r from-[#061f12]/92 via-[#061f12]/68 to-[#061f12]/18"
+        class="absolute inset-0 bg-gradient-to-r from-black/62 via-black/30 to-black/18"
       />
       <div
         class="relative mx-auto flex min-h-[330px] max-w-6xl items-center px-4 py-12 sm:min-h-[410px] sm:px-6"
@@ -66,15 +66,6 @@
 
     <main class="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-8 lg:py-10">
       <section id="ods" class="space-y-6">
-        <div class="vc-ods-section-head">
-          <p role="heading" aria-level="2" class="vc-content-title text-[#687179]">
-            Vinculação aos ODS (Objetivos do Desenvolvimento Sustentável)
-          </p>
-          <p class="vc-section-lead text-slate-600">
-            Cada card conecta um objetivo a leituras possíveis para políticas públicas locais. Passe
-            o mouse para uma descrição rápida ou clique para fixar o detalhe.
-          </p>
-        </div>
 
         <div
           ref="goalInfoCard"
@@ -368,7 +359,7 @@
         <div class="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p class="text-xs font-black uppercase tracking-[0.16em] text-[#1d6d13]">
-              Atualidades do munic&iacute;pio
+              Atualidades do município
             </p>
             <p role="heading" aria-level="2" class="vc-content-title mt-2 text-[#687179]">
               Not&iacute;cias relacionadas aos ODS
@@ -486,7 +477,8 @@ interface NewsItem {
   goalIds?: number[];
 }
 
-const heroImageUrl = new URL('../assets/vca.jpeg', import.meta.url).href;
+const currentOdsItemIndex = ref(0)
+const heroImageUrl = new URL('../assets/por-do-sol-vca.jpeg', import.meta.url).href;
 const prefsImageUrl = new URL('../assets/prefs2.png', import.meta.url).href;
 const goalImageUrls = import.meta.glob('../assets/*.{jpg,png}', {
   eager: true,
@@ -728,6 +720,8 @@ const fallbackGoals: Goal[] = [
 const goals = ref<Goal[]>(fallbackGoals);
 const news = ref<NewsItem[]>([]);
 const newsLoading = ref(true);
+const selectedGoalNews = ref<NewsItem[]>([]);
+const selectedGoalNewsLoading = ref(true);
 
 const selectedGoal = ref<Goal | null>(null);
 const isGoalLoading = ref(false);
@@ -746,7 +740,7 @@ function getGoalImage(id: number) {
   return goalImageUrls[`../assets/${id}.${extension}`] as string | undefined;
 }
 
-function selectGoal(goal: Goal) {
+function selectGoal(goal: Goal, dontScroll?:boolean) {
   const shouldExpandPanel = !hasExpandedGoalPanel.value;
 
   selectedGoal.value = null;
@@ -765,9 +759,11 @@ function selectGoal(goal: Goal) {
     isGoalPanelExpanding.value = true;
     isGoalGuideFadingOut.value = false;
 
-    window.requestAnimationFrame(() => {
-      goalInfoCard.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+    if(dontScroll){
+      window.requestAnimationFrame(() => {
+        goalInfoCard.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
 
     goalExpansionTimer = window.setTimeout(() => {
       isGoalGuideFadingOut.value = true;
@@ -817,6 +813,20 @@ onBeforeUnmount(() => {
   }
 });
 
+function startCarousel(){
+  goals.value[currentOdsItemIndex.value] && selectGoal(goals.value[currentOdsItemIndex.value as number] as Goal)
+  currentOdsItemIndex.value++
+  setInterval(()=>{
+    let index = 0
+    if(currentOdsItemIndex.value < 17){
+      index = currentOdsItemIndex.value++
+    }else {
+      currentOdsItemIndex.value = 0
+    }
+    selectGoal(goals.value[index] as Goal, true)
+  }, 15000)
+}
+
 onMounted(async () => {
   const [goalsResult, newsResult] = await Promise.allSettled([
     apiRequest<Goal[]>('/goals'),
@@ -825,7 +835,9 @@ onMounted(async () => {
   goals.value = goalsResult.status === 'fulfilled' ? goalsResult.value : fallbackGoals;
   news.value = newsResult.status === 'fulfilled' ? newsResult.value : [];
   newsLoading.value = false;
+  startCarousel();
 });
+
 
 const metrics = [
   {
